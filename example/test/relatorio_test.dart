@@ -14,7 +14,7 @@ void main() {
     });
     debugDisableShadows = false;
     final watch = Stopwatch()..start();
-    final bytes = (await tester.runAsync(gerarRelatorioVendas))!;
+    final bytes = (await tester.runAsync(criarRelatorioVendas().save))!;
     debugDisableShadows = true;
     debugPrint('relatório: ${bytes.length} bytes em ${watch.elapsedMilliseconds} ms');
     Directory('build').createSync(recursive: true);

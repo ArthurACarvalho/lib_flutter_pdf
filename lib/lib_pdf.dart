@@ -18,5 +18,7 @@ export 'src/font/font_registry.dart' show PdfFont;
 export 'src/layout/page_format.dart';
 export 'src/layout/pdf_context.dart' show PdfContext;
 export 'src/pdf_document.dart';
+export 'src/viewer/pdf_document_viewer.dart';
+export 'src/viewer/viewer_backend.dart';
 export 'src/widgets/markers.dart' show PdfKeepTogether, PdfPageBreak, PdfRasterize;
 export 'src/widgets/pdf_table.dart';

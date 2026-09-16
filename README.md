@@ -1,6 +1,6 @@
 # lib_pdf
 
-Relatórios PDF escritos com **widgets comuns do Flutter**, sem dependências externas.
+Relatórios PDF escritos com **widgets comuns do Flutter**, com visualizador (zoom, páginas e impressão) incluído.
 
 ```dart
 import 'package:flutter/material.dart';
@@ -18,6 +18,8 @@ doc.addPage(PdfMultiPage(
 ));
 final Uint8List bytes = await doc.save();
 ```
+
+A geração do PDF é implementada do zero, sem bibliotecas de PDF. O visualizador usa o pacote [`printing`](https://pub.dev/packages/printing) para renderizar as páginas e abrir o diálogo de impressão.
 
 Não há sintaxe nova para aprender: `Text`, `Row`, `Column`, `Container`, `Card`, `Table`, `Icon`, `Image`, `CustomPaint`, widgets do app e de pacotes (como `fl_chart`) funcionam como na tela. Só as classes específicas do PDF têm o prefixo `Pdf`.
 
@@ -72,6 +74,38 @@ PdfDocument(
 - **`PdfContext`**: chega aos builders (`pageNumber`, `pagesCount`, `format`) e também pode ser lido em qualquer widget com `PdfContext.of(context)`.
 - **Formatos**: `PdfPageFormat.a4` (padrão), `a3`, `a5`, `letter`, `legal`, além de `.landscape` e `PdfPageFormat(largura, altura)` em pontos. 1 pixel lógico equivale a 1 ponto; `PdfPageFormat.cm` e `.mm` ajudam nas margens.
 
+## Visualizador
+
+O jeito mais simples é gerar e abrir numa nova tela:
+
+```dart
+PdfDocumentViewer.open(context, document: doc, title: 'Relatório de Vendas', fileName: 'vendas.pdf');
+```
+
+Para embutir em uma tela sua:
+
+```dart
+PdfDocumentViewer.document(doc)          // gera o PDF ao abrir
+PdfDocumentViewer.bytes(bytes)           // PDF já gerado (ou qualquer outro PDF)
+PdfDocumentViewer(build: () => doc.save())
+```
+
+O que ele oferece:
+
+- **Rolagem contínua** com indicador "3 / 15". As setas levam à página anterior e à próxima, e tocar no indicador abre "Ir para a página".
+- **Zoom** por botões (50% a 500%), pinça e toque duplo. Tocar no percentual volta a ajustar a página à largura.
+- **Impressão** pelo diálogo nativo do sistema.
+- **Nitidez sob demanda**: as páginas aparecem primeiro em baixa resolução e são renderizadas de novo, nítidas, conforme ficam visíveis ou o zoom muda.
+
+Parâmetros úteis: `allowPrinting`, `showToolbar`, `toolbarActions` (botões extras, como compartilhar) e `backgroundColor`. Com um `PdfDocumentViewerController` dá para montar a própria barra: `zoomIn()`, `zoomOut()`, `fitWidth()`, `goToPage(n)`, `nextPage()`, `previousPage()`, `printDocument()`, `reload()`, além de `pageNumber`, `pageCount` e `zoom`.
+
+### Configuração por plataforma (pacote `printing`)
+
+- **Android e iOS**: nada a configurar.
+- **macOS**: adicione `com.apple.security.print` como `true` em `macos/Runner/DebugProfile.entitlements` e `Release.entitlements`.
+- **Web**: o pdf.js é baixado do CDN `unpkg.com` na primeira visualização. Para servir uma cópia própria, defina `window.dartPdfJsBaseUrl` no `index.html`.
+- **Windows e Linux**: o `printing` baixa o pdfium durante o build.
+
 ## Paginação
 
 O corte entre páginas acontece **apenas** em pontos que não atravessam conteúdo:
@@ -123,7 +157,7 @@ testWidgets('relatório', (tester) async {
 
 Nos testes, o `flutter_test` desenha sombras de `Material` como contornos (`debugDisableShadows`). Fontes do app, como `MaterialIcons`, precisam ser carregadas com `FontLoader`.
 
-Os testes do pacote validam os PDFs com `qpdf`/`poppler` quando estão disponíveis. Por padrão eles são procurados no `PATH`; também dá para apontar a variável `LIB_PDF_TOOLS` para um script que exporte `PATH`/`LD_LIBRARY_PATH`. Para pular o teste de desempenho, use `flutter test --exclude-tags perf`.
+Os testes do pacote validam os PDFs com `qpdf`/`poppler` quando estão disponíveis. Por padrão eles são procurados no `PATH`; também dá para apontar a variável `LIB_PDF_TOOLS` para um script que exporte `PATH`/`LD_LIBRARY_PATH`. Para pular o teste de desempenho, use `flutter test --exclude-tags perf`. Para testar telas com o visualizador, passe um `PdfViewerBackend` falso em `backend:` (veja `test/viewer_test.dart`).
 
 ## Limitações conhecidas
 
@@ -131,7 +165,7 @@ Os testes do pacote validam os PDFs com `qpdf`/`poppler` quando estão disponív
 - **Ligaduras e kerning**: são aproximados. Cada palavra é posicionada exatamente onde o Flutter a colocou, mas as letras internas usam as larguras da fonte ajustadas à largura da palavra.
 - **Execução**: a geração roda na thread principal (ela depende do motor de layout do Flutter). Como referência, uma tabela de 2.000 linhas (cerca de 50 páginas) leva de 1,5 a 2,5 s num desktop.
 - **`GlobalKey`s**: são compartilhadas com o app, então não reutilize a mesma chave na tela e no relatório ao mesmo tempo.
-- **Web**: compila, mas ainda não foi validada em execução.
+- **Web**: a geração e o visualizador (renderização, zoom e navegação) foram validados no Chrome. A impressão ainda não foi testada em dispositivos reais.
 
 ## Exemplo
 
@@ -140,5 +174,5 @@ Os testes do pacote validam os PDFs com `qpdf`/`poppler` quando estão disponív
 ```sh
 cd example
 flutter test          # gera build/relatorio_vendas.pdf
-flutter run           # botão "Gerar relatório"
+flutter run           # botão "Abrir relatório" abre o visualizador
 ```

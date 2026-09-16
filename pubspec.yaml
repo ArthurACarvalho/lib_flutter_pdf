@@ -10,6 +10,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  printing: ^5.15.0
 
 dev_dependencies:
   flutter_test:

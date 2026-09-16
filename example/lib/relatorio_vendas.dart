@@ -1,5 +1,3 @@
-import 'dart:typed_data';
-
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:lib_pdf/lib_pdf.dart';
@@ -24,7 +22,7 @@ String reais(num valor) {
 
 /// Relatório de demonstração: widgets comuns do Flutter, gráficos (um
 /// CustomPainter próprio e dois do fl_chart) e uma tabela longa paginada.
-Future<Uint8List> gerarRelatorioVendas() {
+PdfDocument criarRelatorioVendas() {
   final pedidos = [
     for (var i = 1; i <= 120; i++)
       (numero: 1000 + i, cliente: 'Cliente ${String.fromCharCode(65 + i % 26)}${i % 7}', valor: 150.0 + (i * 73) % 900),
@@ -132,7 +130,7 @@ Future<Uint8List> gerarRelatorioVendas() {
     ],
   ));
 
-  return doc.save();
+  return doc;
 }
 
 /// Títulos usam o tema do documento, lido com o BuildContext normal.

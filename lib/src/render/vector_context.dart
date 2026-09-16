@@ -30,7 +30,6 @@ class VectorPaintingContext extends PaintingContext {
   @override
   void paintChild(RenderObject child, Offset offset) {
     if (child is RenderBox && !child.hasSize) return;
-    if (child.debugNeedsLayout) return;
 
     // Descarta o que está totalmente fora da área visível (ex.: linhas de
     // uma tabela que pertencem a outra página).
