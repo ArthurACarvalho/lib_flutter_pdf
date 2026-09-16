@@ -1,0 +1,23 @@
+name: lib_pdf
+description: "Gere relatórios PDF escrevendo widgets Flutter comuns: texto real, gráficos vetoriais e paginação automática, sem dependências externas."
+version: 0.1.0
+publish_to: 'none'
+
+environment:
+  sdk: ^3.12.2
+  flutter: ">=3.44.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  # Só afeta os testes do pacote (disponibiliza MaterialIcons no bundle).
+  uses-material-design: true
+  assets:
+    - fonts/
