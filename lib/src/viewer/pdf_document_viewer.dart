@@ -1,12 +1,27 @@
 import 'dart:async';
 import 'dart:math' as math;
-import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../pdf_document.dart';
 import 'viewer_backend.dart';
+
+/// Cores do visualizador (tema claro, independente do tema do app).
+abstract final class _Palette {
+  static const background = Color(0xFFF0F2F5);
+  static const bar = Color(0xFFFFFFFF);
+  static const divider = Color(0xFFE4E7EC);
+  static const outline = Color(0xFFD0D5DD);
+  static const hover = Color(0xFFF2F4F7);
+  static const splash = Color(0x66D0D5DD);
+  static const icon = Color(0xFF344054);
+  static const disabled = Color(0xFFBAC1CC);
+  static const text = Color(0xFF101828);
+  static const muted = Color(0xFF667085);
+  static const pdf = Color(0xFFE5483B);
+}
 
 /// Controla um [PdfDocumentViewer] de fora (ex.: barra de ferramentas própria).
 class PdfDocumentViewerController extends ChangeNotifier {
@@ -15,7 +30,10 @@ class PdfDocumentViewerController extends ChangeNotifier {
   int _pageCount = 0;
   int _pageNumber = 1;
   double _zoom = 1;
+  bool _fitsPage = false;
   bool _printing = false;
+  bool _saving = false;
+  bool _disposed = false;
 
   /// Se o documento já foi gerado e as páginas estão prontas.
   bool get isReady => _pageCount > 0;
@@ -28,12 +46,17 @@ class PdfDocumentViewerController extends ChangeNotifier {
   /// 1.0 = página ajustada à largura do visualizador.
   double get zoom => _zoom;
 
+  /// Se o zoom foi ajustado para a página inteira caber na tela ([fitPage]).
+  bool get fitsPage => _fitsPage;
+
   bool get isPrinting => _printing;
+
+  bool get isSaving => _saving;
 
   /// Bytes do PDF exibido (nulo enquanto é gerado).
   Uint8List? get bytes => _state?._bytes;
 
-  static const zoomLevels = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0, 3.0, 4.0, 5.0];
+  static const zoomLevels = [0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 2.0, 3.0, 4.0, 5.0];
 
   void zoomIn() {
     final next = zoomLevels.firstWhere((z) => z > _zoom + 0.01, orElse: () => zoomLevels.last);
@@ -48,6 +71,9 @@ class PdfDocumentViewerController extends ChangeNotifier {
   /// Volta a página a ocupar a largura do visualizador.
   void fitWidth() => _state?._setZoom(1);
 
+  /// Ajusta o zoom para a página atual caber inteira na tela.
+  void fitPage() => _state?._fitPage();
+
   void setZoom(double zoom) => _state?._setZoom(zoom);
 
   Future<void> goToPage(int pageNumber) async => _state?._goToPage(pageNumber);
@@ -59,10 +85,22 @@ class PdfDocumentViewerController extends ChangeNotifier {
   /// Abre o diálogo de impressão do sistema.
   Future<bool> printDocument() async => await _state?._print() ?? false;
 
+  /// Abre o compartilhamento do sistema, com "Salvar em Arquivos", Google
+  /// Drive etc. [bounds] é a área do botão, onde a janela se ancora no iPad.
+  Future<bool> saveDocument({Rect? bounds}) async => await _state?._save(bounds) ?? false;
+
   /// Gera o documento de novo (ex.: depois de mudar os dados).
   Future<void> reload() async => _state?._load();
 
-  void _update({int? pageCount, int? pageNumber, double? zoom, bool? printing}) {
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
+  }
+
+  void _update({int? pageCount, int? pageNumber, double? zoom, bool? fitsPage, bool? printing, bool? saving}) {
+    // Impressão e compartilhamento podem terminar depois que a tela fechou.
+    if (_disposed) return;
     var changed = false;
     if (pageCount != null && pageCount != _pageCount) {
       _pageCount = pageCount;
@@ -76,8 +114,16 @@ class PdfDocumentViewerController extends ChangeNotifier {
       _zoom = zoom;
       changed = true;
     }
+    if (fitsPage != null && fitsPage != _fitsPage) {
+      _fitsPage = fitsPage;
+      changed = true;
+    }
     if (printing != null && printing != _printing) {
       _printing = printing;
+      changed = true;
+    }
+    if (saving != null && saving != _saving) {
+      _saving = saving;
       changed = true;
     }
     if (changed) notifyListeners();
@@ -85,7 +131,7 @@ class PdfDocumentViewerController extends ChangeNotifier {
 }
 
 /// Visualizador de PDF com rolagem contínua, navegação entre páginas, zoom
-/// (botões, pinça e toque duplo) e impressão.
+/// (botões, pinça e toque duplo), impressão e salvamento.
 ///
 /// ```dart
 /// PdfDocumentViewer.document(doc)            // gera e exibe
@@ -96,11 +142,14 @@ class PdfDocumentViewer extends StatefulWidget {
   const PdfDocumentViewer.document(
     PdfDocument this.document, {
     super.key,
+    this.title,
     this.fileName = 'documento.pdf',
     this.controller,
     this.showToolbar = true,
     this.allowPrinting = true,
+    this.allowSaving = true,
     this.toolbarActions = const [],
+    this.onClose,
     this.backgroundColor,
     this.backend = PdfViewerBackend.printing,
   }) : bytes = null,
@@ -110,11 +159,14 @@ class PdfDocumentViewer extends StatefulWidget {
   const PdfDocumentViewer.bytes(
     Uint8List this.bytes, {
     super.key,
+    this.title,
     this.fileName = 'documento.pdf',
     this.controller,
     this.showToolbar = true,
     this.allowPrinting = true,
+    this.allowSaving = true,
     this.toolbarActions = const [],
+    this.onClose,
     this.backgroundColor,
     this.backend = PdfViewerBackend.printing,
   }) : document = null,
@@ -124,11 +176,14 @@ class PdfDocumentViewer extends StatefulWidget {
   const PdfDocumentViewer({
     super.key,
     required Future<Uint8List> Function() this.build,
+    this.title,
     this.fileName = 'documento.pdf',
     this.controller,
     this.showToolbar = true,
     this.allowPrinting = true,
+    this.allowSaving = true,
     this.toolbarActions = const [],
+    this.onClose,
     this.backgroundColor,
     this.backend = PdfViewerBackend.printing,
   }) : document = null,
@@ -138,53 +193,73 @@ class PdfDocumentViewer extends StatefulWidget {
   final Uint8List? bytes;
   final Future<Uint8List> Function()? build;
 
-  /// Nome sugerido ao imprimir/salvar pelo diálogo do sistema.
+  /// Texto da barra superior. O padrão é [fileName].
+  final String? title;
+
+  /// Nome do arquivo ao imprimir, salvar ou compartilhar.
   final String fileName;
 
   final PdfDocumentViewerController? controller;
+
+  /// Mostra as barras superior e inferior.
   final bool showToolbar;
   final bool allowPrinting;
+  final bool allowSaving;
 
-  /// Botões extras no fim da barra de ferramentas.
+  /// Botões extras na barra superior, antes do botão de fechar. Use
+  /// [PdfViewerToolbarButton] para manter o mesmo estilo.
   final List<Widget> toolbarActions;
+
+  /// Quando informado, a barra superior mostra o botão de fechar.
+  final VoidCallback? onClose;
 
   /// Cor atrás das páginas.
   final Color? backgroundColor;
 
   final PdfViewerBackend backend;
 
-  /// Abre o visualizador em uma nova tela.
+  /// Abre o visualizador em uma nova tela, com botão de fechar.
   static Future<void> open(
     BuildContext context, {
     PdfDocument? document,
     Uint8List? bytes,
-    String title = 'PDF',
+    String? title,
     String fileName = 'documento.pdf',
     bool allowPrinting = true,
+    bool allowSaving = true,
     List<Widget> toolbarActions = const [],
     PdfViewerBackend backend = PdfViewerBackend.printing,
   }) {
     assert((document == null) != (bytes == null), 'Informe document ou bytes');
     return Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (context) => Scaffold(
-          appBar: AppBar(title: Text(title)),
-          body: document != null
-              ? PdfDocumentViewer.document(
-                  document,
-                  fileName: fileName,
-                  allowPrinting: allowPrinting,
-                  toolbarActions: toolbarActions,
-                  backend: backend,
-                )
-              : PdfDocumentViewer.bytes(
-                  bytes!,
-                  fileName: fileName,
-                  allowPrinting: allowPrinting,
-                  toolbarActions: toolbarActions,
-                  backend: backend,
-                ),
-        ),
+        builder: (context) {
+          void close() => Navigator.of(context).maybePop();
+          return Scaffold(
+            backgroundColor: _Palette.background,
+            body: document != null
+                ? PdfDocumentViewer.document(
+                    document,
+                    title: title,
+                    fileName: fileName,
+                    allowPrinting: allowPrinting,
+                    allowSaving: allowSaving,
+                    toolbarActions: toolbarActions,
+                    onClose: close,
+                    backend: backend,
+                  )
+                : PdfDocumentViewer.bytes(
+                    bytes!,
+                    title: title,
+                    fileName: fileName,
+                    allowPrinting: allowPrinting,
+                    allowSaving: allowSaving,
+                    toolbarActions: toolbarActions,
+                    onClose: close,
+                    backend: backend,
+                  ),
+          );
+        },
       ),
     );
   }
@@ -213,8 +288,8 @@ class _PageEntry {
 
 class _PdfDocumentViewerState extends State<PdfDocumentViewer> {
   static const _previewDpi = 24.0;
-  static const _padding = 16.0;
-  static const _spacing = 12.0;
+  static const _padding = 24.0;
+  static const _spacing = 16.0;
   static const _maxSharpPixels = 4096.0;
 
   PdfDocumentViewerController? _ownController;
@@ -235,6 +310,9 @@ class _PdfDocumentViewerState extends State<PdfDocumentViewer> {
   Size _viewport = Size.zero;
   List<double> _tops = const [];
   double _pointsToPixels = 1;
+
+  /// Página usada em "ajustar à página"; nulo quando o zoom é livre.
+  int? _fitPageIndex;
 
   final Map<int, double> _wanted = {};
   final Map<int, double> _inFlight = {};
@@ -298,6 +376,7 @@ class _PdfDocumentViewerState extends State<PdfDocumentViewer> {
         return;
       }
       if (pages.isEmpty) throw StateError('O PDF não tem páginas');
+      if (_fitPageIndex != null && _fitPageIndex! >= pages.length) _fitPageIndex = pages.length - 1;
       setState(() {
         _bytes = bytes;
         _pages = pages;
@@ -315,7 +394,27 @@ class _PdfDocumentViewerState extends State<PdfDocumentViewer> {
   double get _minZoom => PdfDocumentViewerController.zoomLevels.first;
   double get _maxZoom => PdfDocumentViewerController.zoomLevels.last;
 
+  /// Pixels por ponto com zoom 1: página mais larga ocupando a largura
+  /// disponível (até 900 px).
+  double get _fitWidthScale {
+    final widest = _pages.map((p) => p.widthPoints).reduce(math.max);
+    return math.max(math.min(_viewport.width - _padding * 2, 900) / widest, 0.05);
+  }
+
+  double _fitPageZoom(int index) {
+    final page = _pages[index];
+    final scale = math.min(
+      (_viewport.width - _padding * 2) / page.widthPoints,
+      (_viewport.height - _padding * 2) / page.heightPoints,
+    );
+    return (scale / _fitWidthScale).clamp(_minZoom, _maxZoom);
+  }
+
   void _setZoom(double zoom, {Offset? focal}) {
+    if (_fitPageIndex != null) {
+      _fitPageIndex = null;
+      _controller._update(fitsPage: false);
+    }
     final target = zoom.clamp(_minZoom, _maxZoom);
     if ((target - _zoom).abs() < 0.001 || _pages.isEmpty) return;
     final ratio = target / _zoom;
@@ -334,6 +433,24 @@ class _PdfDocumentViewerState extends State<PdfDocumentViewer> {
         final x = (horizontal + anchor.dx) * ratio - anchor.dx;
         _horizontal.jumpTo(x.clamp(0.0, _horizontal.position.maxScrollExtent));
       }
+    });
+  }
+
+  void _fitPage() {
+    if (_pages.isEmpty || _viewport.isEmpty) return;
+    final index = (_controller.pageNumber - 1).clamp(0, _pages.length - 1);
+    final target = _fitPageZoom(index);
+    setState(() {
+      _fitPageIndex = index;
+      _zoom = target;
+    });
+    _controller._update(zoom: target, fitsPage: true);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || index >= _tops.length) return;
+      if (_vertical.hasClients) {
+        _vertical.jumpTo((_tops[index] - _padding).clamp(0.0, _vertical.position.maxScrollExtent));
+      }
+      if (_horizontal.hasClients) _horizontal.jumpTo(0);
     });
   }
 
@@ -371,13 +488,32 @@ class _PdfDocumentViewerState extends State<PdfDocumentViewer> {
     try {
       return await widget.backend.printPdf(bytes, name: widget.fileName);
     } catch (error) {
-      if (mounted) {
-        ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(content: Text('Não foi possível imprimir: $error')));
-      }
+      _showError('Não foi possível imprimir: $error');
       return false;
     } finally {
       _controller._update(printing: false);
     }
+  }
+
+  Future<bool> _save(Rect? bounds) async {
+    final bytes = _bytes;
+    if (bytes == null || _controller.isSaving) return false;
+    _controller._update(saving: true);
+    try {
+      return await widget.backend.sharePdf(bytes, name: widget.fileName, bounds: bounds);
+    } catch (error) {
+      _showError('Não foi possível salvar: $error');
+      return false;
+    } finally {
+      _controller._update(saving: false);
+    }
+  }
+
+  void _showError(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+      SnackBar(content: Text(message), behavior: SnackBarBehavior.floating, showCloseIcon: true),
+    );
   }
 
   // ---------------------------------------------------------------------------
@@ -478,26 +614,29 @@ class _PdfDocumentViewerState extends State<PdfDocumentViewer> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final background = widget.backgroundColor ?? theme.colorScheme.surfaceContainerHighest;
-    return ColoredBox(
-      color: background,
+    return Material(
+      color: widget.backgroundColor ?? _Palette.background,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           if (widget.showToolbar)
             PdfDocumentViewerToolbar(
               controller: _controller,
+              title: widget.title ?? widget.fileName,
               allowPrinting: widget.allowPrinting,
+              allowSaving: widget.allowSaving,
               actions: widget.toolbarActions,
+              onClose: widget.onClose,
             ),
           Expanded(child: _content(context)),
+          if (widget.showToolbar) PdfDocumentViewerNavigationBar(controller: _controller),
         ],
       ),
     );
   }
 
   Widget _content(BuildContext context) {
+    const messageStyle = TextStyle(fontSize: 14, color: _Palette.muted);
     if (_error != null) {
       return Center(
         child: Padding(
@@ -505,10 +644,10 @@ class _PdfDocumentViewerState extends State<PdfDocumentViewer> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.error_outline, size: 40, color: Theme.of(context).colorScheme.error),
+              const Icon(Icons.error_outline, size: 40, color: _Palette.pdf),
               const SizedBox(height: 12),
-              Text('Não foi possível abrir o PDF.\n$_error', textAlign: TextAlign.center),
-              const SizedBox(height: 12),
+              Text('Não foi possível abrir o PDF.\n$_error', textAlign: TextAlign.center, style: messageStyle),
+              const SizedBox(height: 16),
               OutlinedButton(onPressed: _load, child: const Text('Tentar de novo')),
             ],
           ),
@@ -519,7 +658,7 @@ class _PdfDocumentViewerState extends State<PdfDocumentViewer> {
       return const Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          children: [CircularProgressIndicator(), SizedBox(height: 12), Text('Gerando PDF…')],
+          children: [CircularProgressIndicator(), SizedBox(height: 16), Text('Gerando PDF…', style: messageStyle)],
         ),
       );
     }
@@ -527,10 +666,16 @@ class _PdfDocumentViewerState extends State<PdfDocumentViewer> {
     return LayoutBuilder(
       builder: (context, constraints) {
         _viewport = constraints.biggest;
+        if (_fitPageIndex case final index?) {
+          // Mantém a página inteira visível quando a janela muda de tamanho.
+          final zoom = _fitPageZoom(index);
+          if ((zoom - _zoom).abs() > 0.001) {
+            _zoom = zoom;
+            WidgetsBinding.instance.addPostFrameCallback((_) => _controller._update(zoom: zoom));
+          }
+        }
         final widest = _pages.map((p) => p.widthPoints).reduce(math.max);
-        // Zoom 1 = página mais larga ocupando a largura disponível (até 900 px).
-        final fit = math.min(_viewport.width - _padding * 2, 900) / widest;
-        _pointsToPixels = math.max(fit, 0.05) * _zoom;
+        _pointsToPixels = _fitWidthScale * _zoom;
 
         final tops = <double>[];
         var y = _padding;
@@ -596,9 +741,13 @@ class _PdfDocumentViewerState extends State<PdfDocumentViewer> {
         key: ValueKey('lib_pdf_page_$index'),
         width: page.widthPoints * _pointsToPixels,
         height: page.heightPoints * _pointsToPixels,
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           color: Colors.white,
-          boxShadow: [BoxShadow(color: Color(0x33000000), blurRadius: 6, offset: Offset(0, 2))],
+          borderRadius: BorderRadius.circular(2),
+          boxShadow: const [
+            BoxShadow(color: Color(0x0F101828), blurRadius: 3, offset: Offset(0, 1)),
+            BoxShadow(color: Color(0x14101828), blurRadius: 16, offset: Offset(0, 6)),
+          ],
         ),
         child: RawImage(image: page.sharp ?? page.preview, fit: BoxFit.fill, filterQuality: FilterQuality.medium),
       ),
@@ -606,149 +755,435 @@ class _PdfDocumentViewerState extends State<PdfDocumentViewer> {
   }
 }
 
-/// Barra padrão do [PdfDocumentViewer]: páginas, zoom e impressão.
+/// Barra superior do [PdfDocumentViewer]: nome do arquivo, impressão, zoom,
+/// salvar, ajuste da página e fechar.
+///
+/// Em telas estreitas os botões de zoom e de ajuste ficam só na barra
+/// inferior ([PdfDocumentViewerNavigationBar]).
 class PdfDocumentViewerToolbar extends StatelessWidget {
   const PdfDocumentViewerToolbar({
     super.key,
     required this.controller,
+    required this.title,
     this.allowPrinting = true,
+    this.allowSaving = true,
     this.actions = const [],
+    this.onClose,
   });
 
   final PdfDocumentViewerController controller;
+  final String title;
   final bool allowPrinting;
+  final bool allowSaving;
   final List<Widget> actions;
+  final VoidCallback? onClose;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.dark,
+      child: Material(
+        color: _Palette.bar,
+        shape: const Border(bottom: BorderSide(color: _Palette.divider)),
+        child: SafeArea(
+          bottom: false,
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final compact = constraints.maxWidth < 600;
+              final size = compact ? 36.0 : 40.0;
+              final gap = compact ? 6.0 : 8.0;
+              return Container(
+                height: compact ? 56 : 68,
+                padding: EdgeInsets.symmetric(horizontal: compact ? 12 : 20),
+                child: ListenableBuilder(
+                  listenable: controller,
+                  builder: (context, _) {
+                    final ready = controller.isReady;
+                    PdfViewerToolbarButton button(String tooltip, IconData icon, VoidCallback? onPressed) =>
+                        PdfViewerToolbarButton(tooltip: tooltip, icon: icon, onPressed: onPressed, size: size);
+                    final buttons = [
+                      if (allowPrinting)
+                        button('Imprimir', Icons.print_outlined, ready && !controller.isPrinting ? controller.printDocument : null),
+                      if (!compact) ...[
+                        button(
+                          'Aumentar zoom',
+                          Icons.zoom_in,
+                          ready && controller.zoom < PdfDocumentViewerController.zoomLevels.last ? controller.zoomIn : null,
+                        ),
+                        button(
+                          'Diminuir zoom',
+                          Icons.zoom_out,
+                          ready && controller.zoom > PdfDocumentViewerController.zoomLevels.first ? controller.zoomOut : null,
+                        ),
+                      ],
+                      if (allowSaving)
+                        Builder(
+                          builder: (context) => button(
+                            'Salvar',
+                            Icons.save_outlined,
+                            ready && !controller.isSaving
+                                ? () => controller.saveDocument(bounds: _globalBounds(context))
+                                : null,
+                          ),
+                        ),
+                      if (!compact)
+                        controller.fitsPage
+                            ? button('Ajustar à largura', Icons.width_full_outlined, ready ? controller.fitWidth : null)
+                            : button('Ajustar à página', Icons.fit_screen_outlined, ready ? controller.fitPage : null),
+                      ...actions,
+                    ];
+                    return Row(
+                      children: [
+                        _PdfBadge(size: size),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(fontSize: compact ? 15 : 17, fontWeight: FontWeight.w500, color: _Palette.text),
+                          ),
+                        ),
+                        for (final widget in buttons) ...[SizedBox(width: gap), widget],
+                        if (onClose != null) ...[
+                          SizedBox(width: compact ? 10 : 20),
+                          button('Fechar', Icons.close, onClose),
+                        ],
+                      ],
+                    );
+                  },
+                ),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
+  static Rect? _globalBounds(BuildContext context) {
+    final box = context.findRenderObject();
+    if (box is! RenderBox || !box.hasSize) return null;
+    return box.localToGlobal(Offset.zero) & box.size;
+  }
+}
+
+/// Barra inferior do [PdfDocumentViewer]: página atual (editável) e zoom.
+class PdfDocumentViewerNavigationBar extends StatelessWidget {
+  const PdfDocumentViewerNavigationBar({super.key, required this.controller});
+
+  final PdfDocumentViewerController controller;
+
+  @override
+  Widget build(BuildContext context) {
     return Material(
-      color: theme.colorScheme.surface,
-      elevation: 1,
-      child: ListenableBuilder(
-        listenable: controller,
-        builder: (context, _) {
-          final ready = controller.isReady;
-          final page = controller.pageNumber;
-          final count = controller.pageCount;
-          // Centralizada quando cabe; rola na horizontal em telas estreitas.
-          return LayoutBuilder(
+      color: _Palette.bar,
+      shape: const Border(top: BorderSide(color: _Palette.divider)),
+      child: SafeArea(
+        top: false,
+        child: SizedBox(
+          height: 60,
+          // Centralizada quando cabe; rola na horizontal em telas muito estreitas.
+          child: LayoutBuilder(
             builder: (context, constraints) => SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: ConstrainedBox(
                 constraints: BoxConstraints(minWidth: constraints.maxWidth),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    IconButton(
-                      tooltip: 'Página anterior',
-                      icon: const Icon(Icons.keyboard_arrow_up),
-                      onPressed: ready && page > 1 ? controller.previousPage : null,
-                    ),
-                    TextButton(
-                      onPressed: ready ? () => _askPage(context) : null,
-                      child: Text(ready ? '$page / $count' : '– / –'),
-                    ),
-                    IconButton(
-                      tooltip: 'Próxima página',
-                      icon: const Icon(Icons.keyboard_arrow_down),
-                      onPressed: ready && page < count ? controller.nextPage : null,
-                    ),
-                    const _Separator(),
-                    IconButton(
-                      tooltip: 'Diminuir zoom',
-                      icon: const Icon(Icons.zoom_out),
-                      onPressed: ready && controller.zoom > PdfDocumentViewerController.zoomLevels.first
-                          ? controller.zoomOut
-                          : null,
-                    ),
-                    Tooltip(
-                      message: 'Ajustar à largura',
-                      child: TextButton(
-                        onPressed: ready ? controller.fitWidth : null,
-                        child: Text('${(controller.zoom * 100).round()}%'),
-                      ),
-                    ),
-                    IconButton(
-                      tooltip: 'Aumentar zoom',
-                      icon: const Icon(Icons.zoom_in),
-                      onPressed: ready && controller.zoom < PdfDocumentViewerController.zoomLevels.last
-                          ? controller.zoomIn
-                          : null,
-                    ),
-                    if (allowPrinting) ...[
-                      const _Separator(),
-                      IconButton(
-                        tooltip: 'Imprimir',
-                        icon: const Icon(Icons.print),
-                        onPressed: ready && !controller.isPrinting ? controller.printDocument : null,
-                      ),
-                    ],
-                    ...actions,
-                  ],
+                child: ListenableBuilder(
+                  listenable: controller,
+                  builder: (context, _) {
+                    final ready = controller.isReady;
+                    final page = controller.pageNumber;
+                    final count = controller.pageCount;
+                    return Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        PdfViewerToolbarButton(
+                          tooltip: 'Página anterior',
+                          icon: Icons.chevron_left,
+                          outlined: false,
+                          onPressed: ready && page > 1 ? controller.previousPage : null,
+                        ),
+                        const SizedBox(width: 8),
+                        _PageField(controller: controller),
+                        const SizedBox(width: 8),
+                        PdfViewerToolbarButton(
+                          tooltip: 'Próxima página',
+                          icon: Icons.chevron_right,
+                          outlined: false,
+                          onPressed: ready && page < count ? controller.nextPage : null,
+                        ),
+                        Container(
+                          width: 1,
+                          height: 28,
+                          margin: const EdgeInsets.symmetric(horizontal: 16),
+                          color: _Palette.divider,
+                        ),
+                        _ZoomMenu(controller: controller),
+                      ],
+                    );
+                  },
                 ),
               ),
             ),
-          );
-        },
+          ),
+        ),
       ),
     );
   }
+}
 
-  Future<void> _askPage(BuildContext context) async {
-    final result = await showDialog<int>(
-      context: context,
-      builder: (context) => _GoToPageDialog(current: controller.pageNumber, count: controller.pageCount),
+/// Botão no estilo das barras do [PdfDocumentViewer], para usar em
+/// `toolbarActions`.
+class PdfViewerToolbarButton extends StatelessWidget {
+  const PdfViewerToolbarButton({
+    super.key,
+    required this.icon,
+    required this.tooltip,
+    required this.onPressed,
+    this.outlined = true,
+    this.size = 40,
+  });
+
+  final IconData icon;
+  final String tooltip;
+
+  /// Nulo desabilita o botão.
+  final VoidCallback? onPressed;
+
+  /// Com borda (barra superior) ou sem (setas da barra inferior).
+  final bool outlined;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final enabled = onPressed != null;
+    return Tooltip(
+      message: tooltip,
+      child: Semantics(
+        button: true,
+        enabled: enabled,
+        child: SizedBox.square(
+          dimension: size,
+          child: Material(
+            color: Colors.transparent,
+            clipBehavior: Clip.antiAlias,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+              side: outlined ? const BorderSide(color: _Palette.outline) : BorderSide.none,
+            ),
+            child: InkWell(
+              onTap: onPressed,
+              hoverColor: _Palette.hover,
+              highlightColor: _Palette.hover,
+              splashColor: _Palette.splash,
+              child: Icon(icon, size: outlined ? size * 0.55 : size * 0.65, color: enabled ? _Palette.icon : _Palette.disabled),
+            ),
+          ),
+        ),
+      ),
     );
-    if (result != null) await controller.goToPage(result);
   }
 }
 
-class _GoToPageDialog extends StatefulWidget {
-  const _GoToPageDialog({required this.current, required this.count});
+class _PdfBadge extends StatelessWidget {
+  const _PdfBadge({required this.size});
 
-  final int current;
-  final int count;
+  final double size;
 
   @override
-  State<_GoToPageDialog> createState() => _GoToPageDialogState();
+  Widget build(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(color: _Palette.pdf, borderRadius: BorderRadius.circular(8)),
+      child: Icon(Icons.picture_as_pdf_outlined, color: Colors.white, size: size * 0.6),
+    );
+  }
 }
 
-class _GoToPageDialogState extends State<_GoToPageDialog> {
-  // O controller vive com o diálogo: a animação de saída ainda o usa.
-  late final _text = TextEditingController(text: '${widget.current}');
+/// Caixa "3 / 15": digitar um número e confirmar (ou tocar fora) leva à página.
+class _PageField extends StatefulWidget {
+  const _PageField({required this.controller});
+
+  final PdfDocumentViewerController controller;
+
+  @override
+  State<_PageField> createState() => _PageFieldState();
+}
+
+class _PageFieldState extends State<_PageField> {
+  final _text = TextEditingController();
+  final _focus = FocusNode();
+
+  @override
+  void initState() {
+    super.initState();
+    widget.controller.addListener(_sync);
+    _focus.addListener(_focusChanged);
+    _sync();
+  }
+
+  @override
+  void didUpdateWidget(covariant _PageField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.controller != widget.controller) {
+      oldWidget.controller.removeListener(_sync);
+      widget.controller.addListener(_sync);
+      _sync();
+    }
+  }
 
   @override
   void dispose() {
+    widget.controller.removeListener(_sync);
+    _focus.dispose();
     _text.dispose();
     super.dispose();
   }
 
-  void _submit() => Navigator.of(context).pop(int.tryParse(_text.text.trim()));
+  void _focusChanged() {
+    if (!mounted) return;
+    if (_focus.hasFocus) {
+      // Depois do toque posicionar o cursor: seleciona tudo para digitar por cima.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _focus.hasFocus) _text.selection = TextSelection(baseOffset: 0, extentOffset: _text.text.length);
+      });
+    } else {
+      // Confirmar ou tocar fora leva à página digitada.
+      final page = int.tryParse(_text.text);
+      if (page != null && page != widget.controller.pageNumber) widget.controller.goToPage(page);
+      _sync();
+    }
+    setState(() {});
+  }
+
+  /// Mostra a página atual, exceto enquanto o usuário digita.
+  void _sync() {
+    if (_focus.hasFocus) return;
+    final value = widget.controller.isReady ? '${widget.controller.pageNumber}' : '';
+    if (_text.text != value) _text.text = value;
+  }
+
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('Ir para a página'),
-      content: TextField(
-        controller: _text,
-        autofocus: true,
-        keyboardType: TextInputType.number,
-        decoration: InputDecoration(helperText: 'De 1 a ${widget.count}'),
-        onSubmitted: (_) => _submit(),
+    final ready = widget.controller.isReady;
+    final count = widget.controller.pageCount;
+    const style = TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: _Palette.text);
+    return Container(
+      height: 36,
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      decoration: BoxDecoration(
+        color: _Palette.bar,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: _focus.hasFocus ? Theme.of(context).colorScheme.primary : _Palette.outline),
       ),
-      actions: [
-        TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancelar')),
-        FilledButton(onPressed: _submit, child: const Text('Ir')),
-      ],
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox(
+            width: 10.0 * math.max(2, '$count'.length) + 4,
+            child: TextField(
+              key: const ValueKey('lib_pdf_page_field'),
+              controller: _text,
+              focusNode: _focus,
+              enabled: ready,
+              textAlign: TextAlign.center,
+              textAlignVertical: TextAlignVertical.center,
+              // Com `signed`, o teclado do iPhone tem a tecla de confirmar.
+              keyboardType: const TextInputType.numberWithOptions(signed: true),
+              textInputAction: TextInputAction.go,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              style: style,
+              cursorHeight: 18,
+              decoration: const InputDecoration.collapsed(hintText: null),
+              onSubmitted: (_) => _focus.unfocus(),
+              onTapOutside: (_) => _focus.unfocus(),
+            ),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            ready ? '/ $count' : '/ –',
+            style: style.copyWith(fontWeight: FontWeight.w400, color: _Palette.muted),
+          ),
+        ],
+      ),
     );
   }
 }
 
-class _Separator extends StatelessWidget {
-  const _Separator();
+/// "100% ⌄": abre a lista de níveis de zoom e "Ajustar à página".
+class _ZoomMenu extends StatelessWidget {
+  const _ZoomMenu({required this.controller});
+
+  final PdfDocumentViewerController controller;
 
   @override
-  Widget build(BuildContext context) =>
-      SizedBox(height: 24, child: VerticalDivider(width: 12, color: Theme.of(context).dividerColor));
+  Widget build(BuildContext context) {
+    final ready = controller.isReady;
+    return PopupMenuButton<double>(
+      tooltip: 'Zoom',
+      enabled: ready,
+      color: _Palette.bar,
+      surfaceTintColor: Colors.transparent,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+        side: const BorderSide(color: _Palette.divider),
+      ),
+      // Valor negativo = ajustar à página.
+      onSelected: (value) => value < 0 ? controller.fitPage() : controller.setZoom(value),
+      itemBuilder: (context) => [
+        _item(-1, 'Ajustar à página', selected: controller.fitsPage),
+        const PopupMenuDivider(),
+        for (final level in PdfDocumentViewerController.zoomLevels)
+          _item(
+            level,
+            '${(level * 100).round()}%',
+            selected: !controller.fitsPage && (controller.zoom - level).abs() < 0.001,
+          ),
+      ],
+      child: Container(
+        height: 36,
+        constraints: const BoxConstraints(minWidth: 92),
+        padding: const EdgeInsets.only(left: 12, right: 8),
+        decoration: BoxDecoration(
+          border: Border.all(color: _Palette.outline),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              '${(controller.zoom * 100).round()}%',
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+                color: ready ? _Palette.text : _Palette.disabled,
+              ),
+            ),
+            const SizedBox(width: 6),
+            Icon(Icons.keyboard_arrow_down, size: 20, color: ready ? _Palette.icon : _Palette.disabled),
+          ],
+        ),
+      ),
+    );
+  }
+
+  static PopupMenuItem<double> _item(double value, String label, {required bool selected}) {
+    return PopupMenuItem(
+      value: value,
+      height: 40,
+      child: Row(
+        children: [
+          SizedBox(width: 26, child: selected ? const Icon(Icons.check, size: 18, color: _Palette.icon) : null),
+          Text(
+            label,
+            style: TextStyle(color: _Palette.text, fontWeight: selected ? FontWeight.w600 : FontWeight.w400),
+          ),
+        ],
+      ),
+    );
+  }
 }

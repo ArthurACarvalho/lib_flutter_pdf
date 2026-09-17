@@ -1,6 +1,6 @@
 # lib_pdf
 
-Relatórios PDF escritos com **widgets comuns do Flutter**, com visualizador (zoom, páginas e impressão) incluído.
+Relatórios PDF escritos com **widgets comuns do Flutter**, com visualizador (zoom, páginas, impressão e salvar) incluído.
 
 ```dart
 import 'package:flutter/material.dart';
@@ -19,7 +19,9 @@ doc.addPage(PdfMultiPage(
 final Uint8List bytes = await doc.save();
 ```
 
-A geração do PDF é implementada do zero, sem bibliotecas de PDF. O visualizador usa o pacote [`printing`](https://pub.dev/packages/printing) para renderizar as páginas e abrir o diálogo de impressão.
+A geração do PDF é implementada do zero, sem bibliotecas de PDF. O visualizador usa o pacote [`printing`](https://pub.dev/packages/printing) para renderizar as páginas, imprimir e compartilhar.
+
+**Plataformas**: Android e iOS.
 
 Não há sintaxe nova para aprender: `Text`, `Row`, `Column`, `Container`, `Card`, `Table`, `Icon`, `Image`, `CustomPaint`, widgets do app e de pacotes (como `fl_chart`) funcionam como na tela. Só as classes específicas do PDF têm o prefixo `Pdf`.
 
@@ -90,21 +92,30 @@ PdfDocumentViewer.bytes(bytes)           // PDF já gerado (ou qualquer outro PD
 PdfDocumentViewer(build: () => doc.save())
 ```
 
+O visual é claro, com duas barras:
+
+- **Barra superior**: nome do arquivo (ou `title`) e os botões imprimir, salvar e fechar. Em tablets e com o celular deitado aparecem também aumentar zoom, diminuir zoom e ajustar à página/largura.
+- **Barra inferior**: setas de página anterior e próxima, a caixa "3 / 15" (digite o número e confirme, ou toque fora, para ir à página) e o menu de zoom ("Ajustar à página" e de 25% a 500%).
+
 O que ele oferece:
 
-- **Rolagem contínua** com indicador "3 / 15". As setas levam à página anterior e à próxima, e tocar no indicador abre "Ir para a página".
-- **Zoom** por botões (50% a 500%), pinça e toque duplo. Tocar no percentual volta a ajustar a página à largura.
+- **Rolagem contínua** entre as páginas.
+- **Zoom** por botões, menu, pinça e toque duplo. 100% é a página ajustada à largura (até 900 px).
 - **Impressão** pelo diálogo nativo do sistema.
+- **Salvar**: abre o compartilhamento do sistema, que inclui "Salvar em Arquivos", Google Drive, e-mail e WhatsApp.
+- **Fechar**: o botão aparece quando há `onClose`. O `open` já passa um que fecha a tela.
 - **Nitidez sob demanda**: as páginas aparecem primeiro em baixa resolução e são renderizadas de novo, nítidas, conforme ficam visíveis ou o zoom muda.
 
-Parâmetros úteis: `allowPrinting`, `showToolbar`, `toolbarActions` (botões extras, como compartilhar) e `backgroundColor`. Com um `PdfDocumentViewerController` dá para montar a própria barra: `zoomIn()`, `zoomOut()`, `fitWidth()`, `goToPage(n)`, `nextPage()`, `previousPage()`, `printDocument()`, `reload()`, além de `pageNumber`, `pageCount` e `zoom`.
+Parâmetros úteis:
 
-### Configuração por plataforma (pacote `printing`)
+- `title`, `fileName`, `allowPrinting`, `allowSaving`, `showToolbar` e `backgroundColor`;
+- `toolbarActions`, para botões extras. Use `PdfViewerToolbarButton` para manter o estilo.
 
-- **Android e iOS**: nada a configurar.
-- **macOS**: adicione `com.apple.security.print` como `true` em `macos/Runner/DebugProfile.entitlements` e `Release.entitlements`.
-- **Web**: o pdf.js é baixado do CDN `unpkg.com` na primeira visualização. Para servir uma cópia própria, defina `window.dartPdfJsBaseUrl` no `index.html`.
-- **Windows e Linux**: o `printing` baixa o pdfium durante o build.
+Com um `PdfDocumentViewerController` dá para montar a própria barra: `zoomIn()`, `zoomOut()`, `fitWidth()`, `fitPage()`, `goToPage(n)`, `nextPage()`, `previousPage()`, `printDocument()`, `saveDocument()`, `reload()`, além de `pageNumber`, `pageCount`, `zoom` e `fitsPage`.
+
+### Configuração
+
+Nada a configurar no Android e no iOS.
 
 ## Paginação
 
@@ -163,9 +174,9 @@ Os testes do pacote validam os PDFs com `qpdf`/`poppler` quando estão disponív
 
 - **Direção do texto**: texto RTL vira imagem. Scripts com shaping complexo (árabe, devanágari) não são suportados como texto real: com a Roboto padrão eles viram imagem, mas com uma fonte que tenha esses glifos sairiam sem shaping.
 - **Ligaduras e kerning**: são aproximados. Cada palavra é posicionada exatamente onde o Flutter a colocou, mas as letras internas usam as larguras da fonte ajustadas à largura da palavra.
-- **Execução**: a geração roda na thread principal (ela depende do motor de layout do Flutter). Como referência, uma tabela de 2.000 linhas (cerca de 50 páginas) leva de 1,5 a 2,5 s num desktop.
+- **Execução**: a geração roda na thread principal (ela depende do motor de layout do Flutter). Como referência, uma tabela de 2.000 linhas (cerca de 50 páginas) leva de 1,5 a 2,5 s num computador; em celulares, conte com mais tempo.
 - **`GlobalKey`s**: são compartilhadas com o app, então não reutilize a mesma chave na tela e no relatório ao mesmo tempo.
-- **Web**: a geração e o visualizador (renderização, zoom e navegação) foram validados no Chrome. A impressão ainda não foi testada em dispositivos reais.
+- **Aparelhos reais**: o visualizador foi validado em testes automatizados. Impressão e compartilhamento ainda não foram testados em aparelhos.
 
 ## Exemplo
 
