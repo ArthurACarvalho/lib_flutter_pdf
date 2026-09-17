@@ -60,6 +60,9 @@ void main() {
     String pageField() => tester.widget<TextField>(find.byKey(const ValueKey('lib_pdf_page_field'))).controller!.text;
 
     expect(find.text('vendas.pdf'), findsOneWidget); // título padrão
+    final order = ['Imprimir', 'Ajustar à página', 'Diminuir zoom', 'Aumentar zoom', 'Salvar'];
+    final xs = [for (final tooltip in order) tester.getCenter(find.byTooltip(tooltip)).dx];
+    expect(xs, orderedEquals([...xs]..sort()));
     expect(find.byTooltip('Fechar'), findsNothing); // sem onClose
     expect(pageField(), '1');
     expect(find.text('/ 3'), findsOneWidget);
@@ -167,6 +170,9 @@ void main() {
     expect(find.byTooltip('Imprimir'), findsOneWidget);
     expect(find.byTooltip('Fechar'), findsOneWidget);
     expect(find.text('100%'), findsOneWidget);
+    final order = ['Imprimir', 'Salvar', 'Fechar'];
+    final xs = [for (final tooltip in order) tester.getCenter(find.byTooltip(tooltip)).dx];
+    expect(xs, orderedEquals([...xs]..sort()));
   });
 
   testWidgets('gera o PdfDocument ao abrir e mostra carregando', (tester) async {

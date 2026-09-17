@@ -94,7 +94,7 @@ PdfDocumentViewer(build: () => doc.save())
 
 O visual é claro, com duas barras:
 
-- **Barra superior**: nome do arquivo (ou `title`) e os botões imprimir, salvar e fechar. Em tablets e com o celular deitado aparecem também aumentar zoom, diminuir zoom e ajustar à página/largura.
+- **Barra superior**: nome do arquivo (ou `title`) e os botões imprimir, ajustar à página/largura, diminuir zoom, aumentar zoom, salvar e fechar. Com o celular em pé ficam só imprimir, salvar e fechar; os outros aparecem em tablets e com o celular deitado.
 - **Barra inferior**: setas de página anterior e próxima, a caixa "3 / 15" (digite o número e confirme, ou toque fora, para ir à página) e o menu de zoom ("Ajustar à página" e de 25% a 500%).
 
 O que ele oferece:

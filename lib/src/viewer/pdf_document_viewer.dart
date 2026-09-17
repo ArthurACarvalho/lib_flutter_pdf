@@ -801,19 +801,24 @@ class PdfDocumentViewerToolbar extends StatelessWidget {
                     final ready = controller.isReady;
                     PdfViewerToolbarButton button(String tooltip, IconData icon, VoidCallback? onPressed) =>
                         PdfViewerToolbarButton(tooltip: tooltip, icon: icon, onPressed: onPressed, size: size);
+                    // Ordem: imprimir, ajustar à página/largura, diminuir zoom,
+                    // aumentar zoom, salvar, extras e fechar.
                     final buttons = [
                       if (allowPrinting)
                         button('Imprimir', Icons.print_outlined, ready && !controller.isPrinting ? controller.printDocument : null),
                       if (!compact) ...[
-                        button(
-                          'Aumentar zoom',
-                          Icons.zoom_in,
-                          ready && controller.zoom < PdfDocumentViewerController.zoomLevels.last ? controller.zoomIn : null,
-                        ),
+                        controller.fitsPage
+                            ? button('Ajustar à largura', Icons.width_full_outlined, ready ? controller.fitWidth : null)
+                            : button('Ajustar à página', Icons.fit_screen_outlined, ready ? controller.fitPage : null),
                         button(
                           'Diminuir zoom',
                           Icons.zoom_out,
                           ready && controller.zoom > PdfDocumentViewerController.zoomLevels.first ? controller.zoomOut : null,
+                        ),
+                        button(
+                          'Aumentar zoom',
+                          Icons.zoom_in,
+                          ready && controller.zoom < PdfDocumentViewerController.zoomLevels.last ? controller.zoomIn : null,
                         ),
                       ],
                       if (allowSaving)
@@ -826,10 +831,6 @@ class PdfDocumentViewerToolbar extends StatelessWidget {
                                 : null,
                           ),
                         ),
-                      if (!compact)
-                        controller.fitsPage
-                            ? button('Ajustar à largura', Icons.width_full_outlined, ready ? controller.fitWidth : null)
-                            : button('Ajustar à página', Icons.fit_screen_outlined, ready ? controller.fitPage : null),
                       ...actions,
                     ];
                     return Row(
