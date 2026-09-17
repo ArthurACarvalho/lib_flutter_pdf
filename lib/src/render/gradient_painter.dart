@@ -65,13 +65,11 @@ bool paintGradientDecoration(VectorPaintingContext context, RenderDecoratedBox b
 
 PdfDict _shading(Gradient gradient, Rect rect, TextDirection textDirection) {
   final colors = gradient.colors;
-  var stops = gradient.stops ??
-      [for (var i = 0; i < colors.length; i++) colors.length == 1 ? 0.0 : i / (colors.length - 1)];
+  var stops =
+      gradient.stops ?? [for (var i = 0; i < colors.length; i++) colors.length == 1 ? 0.0 : i / (colors.length - 1)];
 
   // Garante paradas cobrindo [0, 1] em ordem estritamente crescente.
-  final points = <(double, Color)>[
-    for (var i = 0; i < colors.length; i++) (stops[i].clamp(0.0, 1.0), colors[i]),
-  ];
+  final points = <(double, Color)>[for (var i = 0; i < colors.length; i++) (stops[i].clamp(0.0, 1.0), colors[i])];
   if (points.first.$1 > 0) points.insert(0, (0, points.first.$2));
   if (points.last.$1 < 1) points.add((1, points.last.$2));
   for (var i = 1; i < points.length; i++) {
@@ -81,12 +79,12 @@ PdfDict _shading(Gradient gradient, Rect rect, TextDirection textDirection) {
 
   PdfArray rgb(Color c) => PdfArray.nums([c.r, c.g, c.b]);
   PdfDict segment(Color a, Color b) => PdfDict({
-        'FunctionType': const PdfNum(2),
-        'Domain': PdfArray.nums([0, 1]),
-        'C0': rgb(a),
-        'C1': rgb(b),
-        'N': const PdfNum(1),
-      });
+    'FunctionType': const PdfNum(2),
+    'Domain': PdfArray.nums([0, 1]),
+    'C0': rgb(a),
+    'C1': rgb(b),
+    'N': const PdfNum(1),
+  });
 
   final PdfDict function;
   if (points.length == 2) {
@@ -95,11 +93,11 @@ PdfDict _shading(Gradient gradient, Rect rect, TextDirection textDirection) {
     function = PdfDict({
       'FunctionType': const PdfNum(3),
       'Domain': PdfArray.nums([stops.first, stops.last]),
-      'Functions': PdfArray([
-        for (var i = 0; i + 1 < points.length; i++) segment(points[i].$2, points[i + 1].$2),
-      ]),
+      'Functions': PdfArray([for (var i = 0; i + 1 < points.length; i++) segment(points[i].$2, points[i + 1].$2)]),
       'Bounds': PdfArray.nums(stops.sublist(1, stops.length - 1)),
-      'Encode': PdfArray.nums([for (var i = 0; i + 1 < points.length; i++) ...[0, 1]]),
+      'Encode': PdfArray.nums([
+        for (var i = 0; i + 1 < points.length; i++) ...[0, 1],
+      ]),
     });
   }
 

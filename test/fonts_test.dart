@@ -8,15 +8,22 @@ import 'support/pdf_tools.dart';
 
 void main() {
   testWidgets('fonte registrada com PdfFont é usada no layout e embutida no PDF', (tester) async {
-    final doc = PdfDocument(
-      fonts: [PdfFont.memory(File('fonts/Roboto-Light.ttf').readAsBytesSync(), family: 'MinhaFonte')],
-    )..addPage(PdfPage(
-        build: (ctx) => const Column(children: [
-          Text('Fonte padrão'),
-          Text('Fonte própria çãõ', style: TextStyle(fontFamily: 'MinhaFonte', fontSize: 18)),
-          Text('Negrito sintético', style: TextStyle(fontFamily: 'MinhaFonte', fontWeight: FontWeight.bold)),
-        ]),
-      ));
+    final doc =
+        PdfDocument(fonts: [PdfFont.memory(File('fonts/Roboto-Light.ttf').readAsBytesSync(), family: 'MinhaFonte')])
+          ..addPage(
+            PdfPage(
+              build: (ctx) => const Column(
+                children: [
+                  Text('Fonte padrão'),
+                  Text('Fonte própria çãõ', style: TextStyle(fontFamily: 'MinhaFonte', fontSize: 18)),
+                  Text(
+                    'Negrito sintético',
+                    style: TextStyle(fontFamily: 'MinhaFonte', fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+            ),
+          );
     final bytes = (await tester.runAsync(doc.save))!;
     final path = '${PdfTools.outputDir()}/fonts.pdf';
     File(path).writeAsBytesSync(bytes);

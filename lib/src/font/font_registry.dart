@@ -10,16 +10,13 @@ import 'ttf_parser.dart';
 /// métricas. Peso e estilo são lidos da própria fonte.
 class PdfFont {
   /// Fonte a partir de bytes TTF/OTF.
-  PdfFont.memory(Uint8List bytes, {required this.family})
-      : _bytes = bytes,
-        _assetKey = null,
-        _bundle = null;
+  PdfFont.memory(Uint8List bytes, {required this.family}) : _bytes = bytes, _assetKey = null, _bundle = null;
 
   /// Fonte a partir de um asset do app (ex.: `fonts/Inter-Bold.ttf`).
   PdfFont.asset(String assetKey, {required this.family, AssetBundle? bundle})
-      : _bytes = null,
-        _assetKey = assetKey,
-        _bundle = bundle; // ignore: prefer_initializing_formals
+    : _bytes = null,
+      _assetKey = assetKey,
+      _bundle = bundle; // ignore: prefer_initializing_formals
 
   final String family;
   final Uint8List? _bytes;
@@ -148,8 +145,7 @@ class FontRegistry {
       return {
         for (final family in json.cast<Map<String, dynamic>>())
           family['family'] as String: [
-            for (final font in (family['fonts'] as List<dynamic>).cast<Map<String, dynamic>>())
-              font['asset'] as String,
+            for (final font in (family['fonts'] as List<dynamic>).cast<Map<String, dynamic>>()) font['asset'] as String,
           ],
       };
     } catch (_) {

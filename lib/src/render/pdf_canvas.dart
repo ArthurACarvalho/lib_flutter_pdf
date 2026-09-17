@@ -16,15 +16,15 @@ class _GState {
   _GState(this.ctm, this.clip);
 
   _GState.copy(_GState o)
-      : ctm = o.ctm.clone(),
-        clip = o.clip,
-        fill = o.fill,
-        stroke = o.stroke,
-        lineWidth = o.lineWidth,
-        cap = o.cap,
-        join = o.join,
-        miter = o.miter,
-        alphaKey = o.alphaKey;
+    : ctm = o.ctm.clone(),
+      clip = o.clip,
+      fill = o.fill,
+      stroke = o.stroke,
+      lineWidth = o.lineWidth,
+      cap = o.cap,
+      join = o.join,
+      miter = o.miter,
+      alphaKey = o.alphaKey;
 
   Matrix4 ctm;
 
@@ -71,12 +71,9 @@ class PdfCanvasCheckpoint {
 /// nem assim, [unsupported] fica verdadeiro para que o chamador rasterize a
 /// subárvore inteira.
 class PdfCanvas implements ui.Canvas {
-  PdfCanvas({
-    required this.session,
-    required PdfContent content,
-    required Rect deviceClip,
-    Matrix4? transform,
-  }) : _content = content { // ignore: prefer_initializing_formals
+  PdfCanvas({required this.session, required PdfContent content, required Rect deviceClip, Matrix4? transform})
+    // ignore: prefer_initializing_formals
+    : _content = content {
     _stack.add(_GState(transform ?? Matrix4.identity(), deviceClip));
   }
 
@@ -99,12 +96,12 @@ class PdfCanvas implements ui.Canvas {
   // Checkpoints (usados para trocar uma subárvore por imagem).
 
   PdfCanvasCheckpoint checkpoint() => PdfCanvasCheckpoint._(
-        _content,
-        _content.buf.length,
-        _stack.length,
-        _GState.copy(_s)..layer = _s.layer,
-        session.jobCount,
-      );
+    _content,
+    _content.buf.length,
+    _stack.length,
+    _GState.copy(_s)..layer = _s.layer,
+    session.jobCount,
+  );
 
   void rollback(PdfCanvasCheckpoint cp) {
     assert(identical(cp.content, _content) && cp.depth == _stack.length);
@@ -129,10 +126,12 @@ class PdfCanvas implements ui.Canvas {
     final local = getLocalClipBounds();
     final area = bounds == null ? local : bounds.intersect(local);
     final layer = _Layer(_content, alpha, area);
-    _stack.add(_GState.copy(_s)
-      ..layer = layer
-      // Grupos de transparência começam com alfa 1.
-      ..alphaKey = null);
+    _stack.add(
+      _GState.copy(_s)
+        ..layer = layer
+        // Grupos de transparência começam com alfa 1.
+        ..alphaKey = null,
+    );
     _content = PdfContent();
   }
 
@@ -287,38 +286,33 @@ class PdfCanvas implements ui.Canvas {
       _blendName(paint.blendMode) != null;
 
   static String? _blendName(BlendMode mode) => switch (mode) {
-        BlendMode.srcOver || BlendMode.src => 'Normal',
-        BlendMode.multiply => 'Multiply',
-        BlendMode.screen => 'Screen',
-        BlendMode.overlay => 'Overlay',
-        BlendMode.darken => 'Darken',
-        BlendMode.lighten => 'Lighten',
-        BlendMode.colorDodge => 'ColorDodge',
-        BlendMode.colorBurn => 'ColorBurn',
-        BlendMode.hardLight => 'HardLight',
-        BlendMode.softLight => 'SoftLight',
-        BlendMode.difference => 'Difference',
-        BlendMode.exclusion => 'Exclusion',
-        BlendMode.hue => 'Hue',
-        BlendMode.saturation => 'Saturation',
-        BlendMode.color => 'Color',
-        BlendMode.luminosity => 'Luminosity',
-        _ => null,
-      };
+    BlendMode.srcOver || BlendMode.src => 'Normal',
+    BlendMode.multiply => 'Multiply',
+    BlendMode.screen => 'Screen',
+    BlendMode.overlay => 'Overlay',
+    BlendMode.darken => 'Darken',
+    BlendMode.lighten => 'Lighten',
+    BlendMode.colorDodge => 'ColorDodge',
+    BlendMode.colorBurn => 'ColorBurn',
+    BlendMode.hardLight => 'HardLight',
+    BlendMode.softLight => 'SoftLight',
+    BlendMode.difference => 'Difference',
+    BlendMode.exclusion => 'Exclusion',
+    BlendMode.hue => 'Hue',
+    BlendMode.saturation => 'Saturation',
+    BlendMode.color => 'Color',
+    BlendMode.luminosity => 'Luminosity',
+    _ => null,
+  };
 
-  static int _rgbKey(Color c) =>
-      ((c.r * 255).round() << 16) | ((c.g * 255).round() << 8) | (c.b * 255).round();
+  static int _rgbKey(Color c) => ((c.r * 255).round() << 16) | ((c.g * 255).round() << 8) | (c.b * 255).round();
 
   void _applyAlpha(double alpha, BlendMode blendMode) {
     final blend = _blendName(blendMode) ?? 'Normal';
     final a = (alpha * 1000).round() / 1000;
     final key = '$a/$blend';
     if (_s.alphaKey == key || (_s.alphaKey == null && a == 1 && blend == 'Normal')) return;
-    final gs = session.doc.extGState(
-      fillAlpha: a,
-      strokeAlpha: a,
-      blendMode: blend == 'Normal' ? null : blend,
-    );
+    final gs = session.doc.extGState(fillAlpha: a, strokeAlpha: a, blendMode: blend == 'Normal' ? null : blend);
     _content.extGState(gs.name, gs.ref);
     _s.alphaKey = key;
   }
@@ -445,9 +439,11 @@ class PdfCanvas implements ui.Canvas {
   @override
   void drawColor(Color color, BlendMode blendMode) {
     if (blendMode == BlendMode.clear || blendMode == BlendMode.dst) return;
-    drawPaint(Paint()
-      ..color = color
-      ..blendMode = blendMode == BlendMode.src ? BlendMode.srcOver : blendMode);
+    drawPaint(
+      Paint()
+        ..color = color
+        ..blendMode = blendMode == BlendMode.src ? BlendMode.srcOver : blendMode,
+    );
   }
 
   @override
@@ -567,10 +563,7 @@ class PdfCanvas implements ui.Canvas {
       for (final p in points) {
         bounds = bounds.expandToInclude(Rect.fromPoints(p, p));
       }
-      return drawRasterized(
-        bounds.inflate(paint.strokeWidth + 1),
-        (c) => c.drawPoints(pointMode, points, paint),
-      );
+      return drawRasterized(bounds.inflate(paint.strokeWidth + 1), (c) => c.drawPoints(pointMode, points, paint));
     }
     switch (pointMode) {
       case ui.PointMode.points:
@@ -605,9 +598,7 @@ class PdfCanvas implements ui.Canvas {
 
   @override
   void drawRawPoints(ui.PointMode pointMode, Float32List points, Paint paint) {
-    drawPoints(pointMode, [
-      for (var i = 0; i + 1 < points.length; i += 2) Offset(points[i], points[i + 1]),
-    ], paint);
+    drawPoints(pointMode, [for (var i = 0; i + 1 < points.length; i += 2) Offset(points[i], points[i + 1])], paint);
   }
 
   Rect _paintBounds(Rect bounds, Paint paint) {
@@ -860,27 +851,39 @@ class PdfCanvas implements ui.Canvas {
     c.moveTo(r.left + r.tlRadiusX, r.top);
     c.lineTo(r.right - r.trRadiusX, r.top);
     c.curveTo(
-      r.right - r.trRadiusX * (1 - _kappa), r.top, //
-      r.right, r.top + r.trRadiusY * (1 - _kappa),
-      r.right, r.top + r.trRadiusY,
+      r.right - r.trRadiusX * (1 - _kappa),
+      r.top, //
+      r.right,
+      r.top + r.trRadiusY * (1 - _kappa),
+      r.right,
+      r.top + r.trRadiusY,
     );
     c.lineTo(r.right, r.bottom - r.brRadiusY);
     c.curveTo(
-      r.right, r.bottom - r.brRadiusY * (1 - _kappa), //
-      r.right - r.brRadiusX * (1 - _kappa), r.bottom,
-      r.right - r.brRadiusX, r.bottom,
+      r.right,
+      r.bottom - r.brRadiusY * (1 - _kappa), //
+      r.right - r.brRadiusX * (1 - _kappa),
+      r.bottom,
+      r.right - r.brRadiusX,
+      r.bottom,
     );
     c.lineTo(r.left + r.blRadiusX, r.bottom);
     c.curveTo(
-      r.left + r.blRadiusX * (1 - _kappa), r.bottom, //
-      r.left, r.bottom - r.blRadiusY * (1 - _kappa),
-      r.left, r.bottom - r.blRadiusY,
+      r.left + r.blRadiusX * (1 - _kappa),
+      r.bottom, //
+      r.left,
+      r.bottom - r.blRadiusY * (1 - _kappa),
+      r.left,
+      r.bottom - r.blRadiusY,
     );
     c.lineTo(r.left, r.top + r.tlRadiusY);
     c.curveTo(
-      r.left, r.top + r.tlRadiusY * (1 - _kappa), //
-      r.left + r.tlRadiusX * (1 - _kappa), r.top,
-      r.left + r.tlRadiusX, r.top,
+      r.left,
+      r.top + r.tlRadiusY * (1 - _kappa), //
+      r.left + r.tlRadiusX * (1 - _kappa),
+      r.top,
+      r.left + r.tlRadiusX,
+      r.top,
     );
     c.closePath();
   }

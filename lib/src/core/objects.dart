@@ -144,11 +144,13 @@ class PdfString extends PdfObject {
   factory PdfString.date(DateTime date) {
     final u = date.toUtc();
     String two(int v) => v.toString().padLeft(2, '0');
-    return PdfString(Uint8List.fromList(
-      'D:${u.year.toString().padLeft(4, '0')}${two(u.month)}${two(u.day)}'
-              '${two(u.hour)}${two(u.minute)}${two(u.second)}Z'
-          .codeUnits,
-    ));
+    return PdfString(
+      Uint8List.fromList(
+        'D:${u.year.toString().padLeft(4, '0')}${two(u.month)}${two(u.day)}'
+                '${two(u.hour)}${two(u.minute)}${two(u.second)}Z'
+            .codeUnits,
+      ),
+    );
   }
 
   final Uint8List bytes;
@@ -192,8 +194,7 @@ class PdfString extends PdfObject {
 class PdfArray extends PdfObject {
   PdfArray([List<PdfObject>? values]) : values = values ?? [];
 
-  factory PdfArray.nums(Iterable<num> values) =>
-      PdfArray([for (final v in values) PdfNum(v)]);
+  factory PdfArray.nums(Iterable<num> values) => PdfArray([for (final v in values) PdfNum(v)]);
 
   final List<PdfObject> values;
 

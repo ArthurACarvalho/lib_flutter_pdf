@@ -1,17 +1,16 @@
-# lib_pdf_example
+# Exemplo da lib_pdf
 
-A new Flutter project.
+App com um relatório de vendas completo, escrito com widgets do Flutter:
 
-## Getting Started
+- indicadores em `Card`;
+- gráfico de barras com `CustomPainter`;
+- gráficos de linha e de pizza do `fl_chart`;
+- tabela de 120 linhas paginada, com cabeçalho repetido;
+- quebra de página e rodapé "Página X de Y".
 
-This project is a starting point for a Flutter application.
+O relatório fica em [`lib/relatorio_vendas.dart`](lib/relatorio_vendas.dart) e o botão que abre o visualizador, em [`lib/main.dart`](lib/main.dart).
 
-A few resources to get you started if this is your first Flutter project:
-
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+```sh
+flutter test   # gera build/relatorio_vendas.pdf
+flutter run    # abre o app (Android ou iOS)
+```

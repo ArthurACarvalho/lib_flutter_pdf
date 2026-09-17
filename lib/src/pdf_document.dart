@@ -43,14 +43,7 @@ sealed class PdfBasePage {
 /// Uma única página: [build] recebe exatamente a área interna às margens,
 /// como uma tela do app.
 class PdfPage extends PdfBasePage {
-  const PdfPage({
-    super.format,
-    super.margin,
-    super.background,
-    super.foreground,
-    super.theme,
-    required this.build,
-  });
+  const PdfPage({super.format, super.margin, super.background, super.foreground, super.theme, required this.build});
 
   final PdfWidgetBuilder build;
 }
@@ -153,11 +146,7 @@ class PdfDocument {
   Future<Uint8List> save() async {
     final registry = FontRegistry();
     await registry.init(fonts: fonts);
-    final session = PdfRenderSession(
-      doc: PdfDocumentBuilder(),
-      fonts: registry,
-      rasterPixelRatio: rasterPixelRatio,
-    );
+    final session = PdfRenderSession(doc: PdfDocumentBuilder(), fonts: registry, rasterPixelRatio: rasterPixelRatio);
 
     final prepared = <_PreparedSection>[];
     try {
@@ -186,13 +175,9 @@ class PdfDocument {
     }
 
     await session.runJobs();
-    return session.doc.finish(PdfInfo(
-      title: title,
-      author: author,
-      subject: subject,
-      keywords: keywords,
-      creator: creator,
-    ));
+    return session.doc.finish(
+      PdfInfo(title: title, author: author, subject: subject, keywords: keywords, creator: creator),
+    );
   }
 
   static const _platformFamilies = {
@@ -231,7 +216,8 @@ class PdfDocument {
         textDirection: textDirection,
         child: Localizations(
           locale: locale,
-          delegates: localizationsDelegates ??
+          delegates:
+              localizationsDelegates ??
               const [DefaultMaterialLocalizations.delegate, DefaultWidgetsLocalizations.delegate],
           child: Theme(
             data: themeData,
@@ -296,11 +282,7 @@ abstract class _PreparedSection {
   PdfCanvas startPage(PdfRenderSession session, PdfContent content, PdfPageFormat format) {
     // Coordenadas do Flutter: origem no topo, y para baixo.
     content.transform(1, 0, 0, -1, 0, format.height);
-    return PdfCanvas(
-      session: session,
-      content: content,
-      deviceClip: Offset.zero & format.size,
-    );
+    return PdfCanvas(session: session, content: content, deviceClip: Offset.zero & format.size);
   }
 
   void paintTree(PdfCanvas canvas, RenderBox? root, {required Rect clip, required Offset origin}) {
@@ -397,11 +379,7 @@ class _MultiPageSection extends _PreparedSection {
     _body = await buildLoose(
       page,
       ctx,
-      Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: page.crossAxisAlignment,
-        children: page.build(ctx),
-      ),
+      Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: page.crossAxisAlignment, children: page.build(ctx)),
       session,
       width: area.width,
     );
@@ -454,17 +432,15 @@ class _MultiPageSection extends _PreparedSection {
     } while (y < analysis.height - eps);
   }
 
-  Future<double> _measure(PdfRenderSession session, PdfWidgetBuilder? builder, PdfContext ctx, {required bool header}) async {
+  Future<double> _measure(
+    PdfRenderSession session,
+    PdfWidgetBuilder? builder,
+    PdfContext ctx, {
+    required bool header,
+  }) async {
     if (builder == null) return 0;
     final width = _area.width;
-    final tree = await buildLoose(
-      page,
-      ctx,
-      builder(ctx),
-      session,
-      width: width,
-      reuse: header ? _header : _footer,
-    );
+    final tree = await buildLoose(page, ctx, builder(ctx), session, width: width, reuse: header ? _header : _footer);
     if (header) {
       _header = tree;
     } else {
@@ -487,7 +463,12 @@ class _MultiPageSection extends _PreparedSection {
       if (page.header != null) {
         await _measure(session, page.header, ctx, header: true);
         final height = math.max(slice.headerHeight, _header!.root?.size.height ?? 0);
-        paintTree(canvas, _header!.root, clip: Rect.fromLTWH(area.left, area.top, area.width, height), origin: area.topLeft);
+        paintTree(
+          canvas,
+          _header!.root,
+          clip: Rect.fromLTWH(area.left, area.top, area.width, height),
+          origin: area.topLeft,
+        );
       }
 
       final bodyTop = area.top + slice.headerHeight;
@@ -513,7 +494,12 @@ class _MultiPageSection extends _PreparedSection {
         await _measure(session, page.footer, ctx, header: false);
         final height = _footer!.root?.size.height ?? 0;
         final top = area.bottom - math.max(height, slice.footerHeight);
-        paintTree(canvas, _footer!.root, clip: Rect.fromLTWH(area.left, top, area.width, height), origin: Offset(area.left, top));
+        paintTree(
+          canvas,
+          _footer!.root,
+          clip: Rect.fromLTWH(area.left, top, area.width, height),
+          origin: Offset(area.left, top),
+        );
       }
 
       await paintDecorations(session, canvas, page, ctx, foreground: true);

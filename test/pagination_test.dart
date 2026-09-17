@@ -17,41 +17,47 @@ void main() {
   testWidgets('tabela longa pagina com cabeçalho repetido e numeração', (tester) async {
     final doc = PdfDocument(title: 'Paginação');
     TableRow row(List<String> cells, {bool bold = false}) => TableRow(
-          decoration: bold ? const BoxDecoration(color: Color(0xFFE3EAF3)) : null,
-          children: [
-            for (final c in cells)
-              Padding(
-                padding: const EdgeInsets.all(4),
-                child: Text(c, style: TextStyle(fontWeight: bold ? FontWeight.bold : null, fontSize: 10)),
-              ),
-          ],
-        );
-
-    doc.addPage(PdfMultiPage(
-      header: (ctx) => Container(
-        padding: const EdgeInsets.only(bottom: 8),
-        margin: const EdgeInsets.only(bottom: 12),
-        decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: Colors.black26))),
-        child: const Text('Relatório de Pedidos', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-      ),
-      footer: (ctx) => Align(
-        alignment: Alignment.centerRight,
-        child: Text('Página ${ctx.pageNumber} de ${ctx.pagesCount}', style: const TextStyle(fontSize: 9)),
-      ),
-      build: (ctx) => [
-        const Text('Texto longo antes da tabela:', style: TextStyle(fontWeight: FontWeight.bold)),
-        Text(_lorem * 12, textAlign: TextAlign.justify),
-        const SizedBox(height: 16),
-        PdfTable(
-          border: TableBorder.all(color: Colors.black38, width: 0.5),
-          columnWidths: const {0: FixedColumnWidth(50), 2: FixedColumnWidth(80)},
-          header: row(['#', 'Cliente', 'Valor'], bold: true),
-          rows: [for (var i = 1; i <= 200; i++) row(['$i', 'Cliente número $i da lista', 'R\$ ${i * 37},00'])],
-        ),
-        const PdfPageBreak(),
-        const Text('Seção final após quebra forçada'),
+      decoration: bold ? const BoxDecoration(color: Color(0xFFE3EAF3)) : null,
+      children: [
+        for (final c in cells)
+          Padding(
+            padding: const EdgeInsets.all(4),
+            child: Text(c, style: TextStyle(fontWeight: bold ? FontWeight.bold : null, fontSize: 10)),
+          ),
       ],
-    ));
+    );
+
+    doc.addPage(
+      PdfMultiPage(
+        header: (ctx) => Container(
+          padding: const EdgeInsets.only(bottom: 8),
+          margin: const EdgeInsets.only(bottom: 12),
+          decoration: const BoxDecoration(
+            border: Border(bottom: BorderSide(color: Colors.black26)),
+          ),
+          child: const Text('Relatório de Pedidos', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        ),
+        footer: (ctx) => Align(
+          alignment: Alignment.centerRight,
+          child: Text('Página ${ctx.pageNumber} de ${ctx.pagesCount}', style: const TextStyle(fontSize: 9)),
+        ),
+        build: (ctx) => [
+          const Text('Texto longo antes da tabela:', style: TextStyle(fontWeight: FontWeight.bold)),
+          Text(_lorem * 12, textAlign: TextAlign.justify),
+          const SizedBox(height: 16),
+          PdfTable(
+            border: TableBorder.all(color: Colors.black38, width: 0.5),
+            columnWidths: const {0: FixedColumnWidth(50), 2: FixedColumnWidth(80)},
+            header: row(['#', 'Cliente', 'Valor'], bold: true),
+            rows: [
+              for (var i = 1; i <= 200; i++) row(['$i', 'Cliente número $i da lista', 'R\$ ${i * 37},00']),
+            ],
+          ),
+          const PdfPageBreak(),
+          const Text('Seção final após quebra forçada'),
+        ],
+      ),
+    );
 
     final watch = Stopwatch()..start();
     debugDisableShadows = false;

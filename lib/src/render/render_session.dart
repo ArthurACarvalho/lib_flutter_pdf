@@ -19,11 +19,7 @@ class PdfAssetJob {
 
 /// Estado compartilhado por toda a geração de um documento.
 class PdfRenderSession {
-  PdfRenderSession({
-    required this.doc,
-    required this.fonts,
-    this.rasterPixelRatio = 3,
-  });
+  PdfRenderSession({required this.doc, required this.fonts, this.rasterPixelRatio = 3});
 
   final PdfDocumentBuilder doc;
   final FontRegistry fonts;
@@ -60,43 +56,47 @@ class PdfRenderSession {
 
   /// Agenda a gravação de uma imagem do Flutter no XObject [ref].
   void scheduleImage(PdfRef ref, ui.Image image) {
-    _jobs.add(PdfAssetJob(
-      () async {
-        try {
-          final data = await image.toByteData(format: ui.ImageByteFormat.rawStraightRgba);
-          doc.setImageRgba(ref, image.width, image.height, data!.buffer.asUint8List());
-        } finally {
+    _jobs.add(
+      PdfAssetJob(
+        () async {
+          try {
+            final data = await image.toByteData(format: ui.ImageByteFormat.rawStraightRgba);
+            doc.setImageRgba(ref, image.width, image.height, data!.buffer.asUint8List());
+          } finally {
+            image.dispose();
+          }
+        },
+        () {
           image.dispose();
-        }
-      },
-      () {
-        image.dispose();
-        doc.writer.set(ref, const PdfNull());
-      },
-    ));
+          doc.writer.set(ref, const PdfNull());
+        },
+      ),
+    );
   }
 
   /// Agenda a rasterização de um [ui.Picture] com [width]x[height] pixels.
   void schedulePicture(PdfRef ref, ui.Picture picture, int width, int height) {
-    _jobs.add(PdfAssetJob(
-      () async {
-        try {
-          final image = await picture.toImage(width, height);
+    _jobs.add(
+      PdfAssetJob(
+        () async {
           try {
-            final data = await image.toByteData(format: ui.ImageByteFormat.rawStraightRgba);
-            doc.setImageRgba(ref, width, height, data!.buffer.asUint8List());
+            final image = await picture.toImage(width, height);
+            try {
+              final data = await image.toByteData(format: ui.ImageByteFormat.rawStraightRgba);
+              doc.setImageRgba(ref, width, height, data!.buffer.asUint8List());
+            } finally {
+              image.dispose();
+            }
           } finally {
-            image.dispose();
+            picture.dispose();
           }
-        } finally {
+        },
+        () {
           picture.dispose();
-        }
-      },
-      () {
-        picture.dispose();
-        doc.writer.set(ref, const PdfNull());
-      },
-    ));
+          doc.writer.set(ref, const PdfNull());
+        },
+      ),
+    );
   }
 
   /// Agenda um trabalho genérico (ex.: rasterizar uma layer).

@@ -15,8 +15,8 @@ import 'pdf_canvas.dart';
 /// shader masks, texturas) são detectadas e substituídas por uma imagem.
 class VectorPaintingContext extends PaintingContext {
   VectorPaintingContext(this.pdfCanvas, Rect estimatedBounds)
-      : _paragraphs = ParagraphEmitter(pdfCanvas),
-        super(ContainerLayer(), estimatedBounds);
+    : _paragraphs = ParagraphEmitter(pdfCanvas),
+      super(ContainerLayer(), estimatedBounds);
 
   final PdfCanvas pdfCanvas;
   final ParagraphEmitter _paragraphs;
@@ -107,22 +107,19 @@ class VectorPaintingContext extends PaintingContext {
     if (longest > maxPixels) ratio *= maxPixels / longest;
 
     final image = session.doc.reserveImage();
-    session.scheduleJob(
-      () async {
+    session.scheduleJob(() async {
+      try {
+        final rendered = await layer.toImage(bounds, pixelRatio: ratio);
         try {
-          final rendered = await layer.toImage(bounds, pixelRatio: ratio);
-          try {
-            final data = await rendered.toByteData(format: ui.ImageByteFormat.rawStraightRgba);
-            session.doc.setImageRgba(image.ref, rendered.width, rendered.height, data!.buffer.asUint8List());
-          } finally {
-            rendered.dispose();
-          }
+          final data = await rendered.toByteData(format: ui.ImageByteFormat.rawStraightRgba);
+          session.doc.setImageRgba(image.ref, rendered.width, rendered.height, data!.buffer.asUint8List());
         } finally {
-          layer.dispose();
+          rendered.dispose();
         }
-      },
-      () => layer.dispose(),
-    );
+      } finally {
+        layer.dispose();
+      }
+    }, () => layer.dispose());
     final dst = bounds.shift(offset);
     pdfCanvas.content
       ..save()
@@ -168,14 +165,7 @@ class VectorPaintingContext extends PaintingContext {
     Clip clipBehavior = Clip.antiAlias,
     ClipRSuperellipseLayer? oldLayer,
   }) {
-    return super.pushClipRSuperellipse(
-      false,
-      offset,
-      bounds,
-      clipRSuperellipse,
-      painter,
-      clipBehavior: clipBehavior,
-    );
+    return super.pushClipRSuperellipse(false, offset, bounds, clipRSuperellipse, painter, clipBehavior: clipBehavior);
   }
 
   @override
@@ -203,12 +193,7 @@ class VectorPaintingContext extends PaintingContext {
   }
 
   @override
-  void pushLayer(
-    ContainerLayer childLayer,
-    PaintingContextCallback painter,
-    Offset offset, {
-    Rect? childPaintBounds,
-  }) {
+  void pushLayer(ContainerLayer childLayer, PaintingContextCallback painter, Offset offset, {Rect? childPaintBounds}) {
     switch (childLayer) {
       case OpacityLayer(:final alpha, offset: final layerOffset):
         final a = (alpha ?? 255) / 255;
@@ -233,11 +218,7 @@ class VectorPaintingContext extends PaintingContext {
         pdfCanvas.transform(transform.storage);
         painter(this, offset);
         pdfCanvas.restore();
-      case ColorFilterLayer() ||
-            ImageFilterLayer() ||
-            ShaderMaskLayer() ||
-            BackdropFilterLayer() ||
-            FollowerLayer():
+      case ColorFilterLayer() || ImageFilterLayer() || ShaderMaskLayer() || BackdropFilterLayer() || FollowerLayer():
         pdfCanvas.unsupported = true;
       case OffsetLayer(offset: final layerOffset):
         pdfCanvas.save();

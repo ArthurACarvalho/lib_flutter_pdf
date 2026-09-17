@@ -42,11 +42,7 @@ class PdfWriter {
     for (final offset in offsets) {
       out.ascii('${offset.toString().padLeft(10, '0')} 00000 n \n');
     }
-    final trailer = PdfDict({
-      'Size': PdfNum(_objects.length + 1),
-      'Root': root,
-      'Info': ?info,
-    });
+    final trailer = PdfDict({'Size': PdfNum(_objects.length + 1), 'Root': root, 'Info': ?info});
     out.ascii('trailer\n');
     trailer.writeTo(out);
     out.ascii('\nstartxref\n$xref\n%%EOF\n');

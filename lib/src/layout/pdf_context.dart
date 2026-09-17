@@ -6,11 +6,7 @@ import 'page_format.dart';
 /// cabeçalho, rodapé e conteúdo.
 @immutable
 class PdfContext {
-  const PdfContext({
-    required this.pageNumber,
-    required this.pagesCount,
-    required this.format,
-  });
+  const PdfContext({required this.pageNumber, required this.pagesCount, required this.format});
 
   /// Número da página no documento, começando em 1.
   final int pageNumber;
@@ -30,15 +26,11 @@ class PdfContext {
     return scope!.pdf;
   }
 
-  static PdfContext? maybeOf(BuildContext context) =>
-      context.dependOnInheritedWidgetOfExactType<PdfPageScope>()?.pdf;
+  static PdfContext? maybeOf(BuildContext context) => context.dependOnInheritedWidgetOfExactType<PdfPageScope>()?.pdf;
 
   @override
   bool operator ==(Object other) =>
-      other is PdfContext &&
-      other.pageNumber == pageNumber &&
-      other.pagesCount == pagesCount &&
-      other.format == format;
+      other is PdfContext && other.pageNumber == pageNumber && other.pagesCount == pagesCount && other.format == format;
 
   @override
   int get hashCode => Object.hash(pageNumber, pagesCount, format);

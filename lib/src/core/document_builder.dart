@@ -33,9 +33,9 @@ class PdfDocumentBuilder {
   int _shadingCount = 0;
 
   EmbeddedFont font(TtfFont font) => _fonts.putIfAbsent(
-        font,
-        () => EmbeddedFont(font: font, resourceName: 'F${_fonts.length + 1}', ref: writer.reserve()),
-      );
+    font,
+    () => EmbeddedFont(font: font, resourceName: 'F${_fonts.length + 1}', ref: writer.reserve()),
+  );
 
   /// Estado gráfico com opacidade de preenchimento/traço.
   PdfNamedRef extGState({double fillAlpha = 1, double strokeAlpha = 1, String? blendMode}) {
@@ -43,12 +43,14 @@ class PdfDocumentBuilder {
     final sa = (strokeAlpha * 1000).round() / 1000;
     final key = '$ca/$sa/$blendMode';
     return _extGStates.putIfAbsent(key, () {
-      final ref = writer.add(PdfDict({
-        'Type': const PdfName('ExtGState'),
-        'ca': PdfNum(ca),
-        'CA': PdfNum(sa),
-        if (blendMode != null) 'BM': PdfName(blendMode),
-      }));
+      final ref = writer.add(
+        PdfDict({
+          'Type': const PdfName('ExtGState'),
+          'ca': PdfNum(ca),
+          'CA': PdfNum(sa),
+          if (blendMode != null) 'BM': PdfName(blendMode),
+        }),
+      );
       return (name: 'G${_extGStates.length + 1}', ref: ref);
     });
   }
@@ -72,17 +74,19 @@ class PdfDocumentBuilder {
     }
     PdfRef? smask;
     if (hasAlpha) {
-      smask = writer.add(PdfStream(
-        PdfDict({
-          'Type': const PdfName('XObject'),
-          'Subtype': const PdfName('Image'),
-          'Width': PdfNum(width),
-          'Height': PdfNum(height),
-          'ColorSpace': const PdfName('DeviceGray'),
-          'BitsPerComponent': const PdfNum(8),
-        }),
-        alpha,
-      ));
+      smask = writer.add(
+        PdfStream(
+          PdfDict({
+            'Type': const PdfName('XObject'),
+            'Subtype': const PdfName('Image'),
+            'Width': PdfNum(width),
+            'Height': PdfNum(height),
+            'ColorSpace': const PdfName('DeviceGray'),
+            'BitsPerComponent': const PdfNum(8),
+          }),
+          alpha,
+        ),
+      );
     }
     writer.set(
       ref,
@@ -103,40 +107,33 @@ class PdfDocumentBuilder {
 
   /// Form XObject a partir de um conteúdo já gravado. Com [transparencyGroup],
   /// o conteúdo é composto isoladamente (necessário para opacidade de grupo).
-  PdfNamedRef addForm(
-    PdfContent content, {
-    required List<double> bbox,
-    bool transparencyGroup = false,
-  }) {
+  PdfNamedRef addForm(PdfContent content, {required List<double> bbox, bool transparencyGroup = false}) {
     final dict = PdfDict({
       'Type': const PdfName('XObject'),
       'Subtype': const PdfName('Form'),
       'BBox': PdfArray.nums(bbox),
       'Resources': content.resources(),
-      if (transparencyGroup)
-        'Group': PdfDict({
-          'S': const PdfName('Transparency'),
-          'CS': const PdfName('DeviceRGB'),
-        }),
+      if (transparencyGroup) 'Group': PdfDict({'S': const PdfName('Transparency'), 'CS': const PdfName('DeviceRGB')}),
     });
     final ref = writer.add(PdfStream(dict, content.buf.toBytes()));
     return (name: 'Fm${++_formCount}', ref: ref);
   }
 
-  PdfNamedRef addShading(PdfDict shading) =>
-      (name: 'Sh${++_shadingCount}', ref: writer.add(shading));
+  PdfNamedRef addShading(PdfDict shading) => (name: 'Sh${++_shadingCount}', ref: writer.add(shading));
 
   PdfRef addObject(PdfObject object) => writer.add(object);
 
   void addPage({required double width, required double height, required PdfContent content}) {
     final contentRef = writer.add(PdfStream(PdfDict(), content.buf.toBytes()));
-    final page = writer.add(PdfDict({
-      'Type': const PdfName('Page'),
-      'Parent': _pagesRef,
-      'MediaBox': PdfArray.nums([0, 0, width, height]),
-      'Resources': content.resources(),
-      'Contents': contentRef,
-    }));
+    final page = writer.add(
+      PdfDict({
+        'Type': const PdfName('Page'),
+        'Parent': _pagesRef,
+        'MediaBox': PdfArray.nums([0, 0, width, height]),
+        'Resources': content.resources(),
+        'Contents': contentRef,
+      }),
+    );
     _pages.add(page);
   }
 
@@ -149,27 +146,22 @@ class PdfDocumentBuilder {
     }
     writer.set(
       _pagesRef,
+      PdfDict({'Type': const PdfName('Pages'), 'Kids': PdfArray(List.of(_pages)), 'Count': PdfNum(_pages.length)}),
+    );
+    final catalog = writer.add(PdfDict({'Type': const PdfName('Catalog'), 'Pages': _pagesRef}));
+    final now = DateTime.now();
+    final infoRef = writer.add(
       PdfDict({
-        'Type': const PdfName('Pages'),
-        'Kids': PdfArray(List.of(_pages)),
-        'Count': PdfNum(_pages.length),
+        if (info.title != null) 'Title': PdfString.text(info.title!),
+        if (info.author != null) 'Author': PdfString.text(info.author!),
+        if (info.subject != null) 'Subject': PdfString.text(info.subject!),
+        if (info.keywords != null) 'Keywords': PdfString.text(info.keywords!),
+        'Creator': PdfString.text(info.creator ?? 'lib_pdf'),
+        'Producer': PdfString.text('lib_pdf'),
+        'CreationDate': PdfString.date(now),
+        'ModDate': PdfString.date(now),
       }),
     );
-    final catalog = writer.add(PdfDict({
-      'Type': const PdfName('Catalog'),
-      'Pages': _pagesRef,
-    }));
-    final now = DateTime.now();
-    final infoRef = writer.add(PdfDict({
-      if (info.title != null) 'Title': PdfString.text(info.title!),
-      if (info.author != null) 'Author': PdfString.text(info.author!),
-      if (info.subject != null) 'Subject': PdfString.text(info.subject!),
-      if (info.keywords != null) 'Keywords': PdfString.text(info.keywords!),
-      'Creator': PdfString.text(info.creator ?? 'lib_pdf'),
-      'Producer': PdfString.text('lib_pdf'),
-      'CreationDate': PdfString.date(now),
-      'ModDate': PdfString.date(now),
-    }));
     return writer.finish(root: catalog, info: infoRef);
   }
 }

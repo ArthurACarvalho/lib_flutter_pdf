@@ -511,9 +511,9 @@ class _PdfDocumentViewerState extends State<PdfDocumentViewer> {
 
   void _showError(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-      SnackBar(content: Text(message), behavior: SnackBarBehavior.floating, showCloseIcon: true),
-    );
+    ScaffoldMessenger.maybeOf(
+      context,
+    )?.showSnackBar(SnackBar(content: Text(message), behavior: SnackBarBehavior.floating, showCloseIcon: true));
   }
 
   // ---------------------------------------------------------------------------
@@ -658,7 +658,11 @@ class _PdfDocumentViewerState extends State<PdfDocumentViewer> {
       return const Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          children: [CircularProgressIndicator(), SizedBox(height: 16), Text('Gerando PDF…', style: messageStyle)],
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(height: 16),
+            Text('Gerando PDF…', style: messageStyle),
+          ],
         ),
       );
     }
@@ -755,8 +759,8 @@ class _PdfDocumentViewerState extends State<PdfDocumentViewer> {
   }
 }
 
-/// Barra superior do [PdfDocumentViewer]: nome do arquivo, impressão, zoom,
-/// salvar, ajuste da página e fechar.
+/// Barra superior do [PdfDocumentViewer]: nome do arquivo, impressão, ajuste
+/// da página, zoom, salvar e fechar.
 ///
 /// Em telas estreitas os botões de zoom e de ajuste ficam só na barra
 /// inferior ([PdfDocumentViewerNavigationBar]).
@@ -805,7 +809,11 @@ class PdfDocumentViewerToolbar extends StatelessWidget {
                     // aumentar zoom, salvar, extras e fechar.
                     final buttons = [
                       if (allowPrinting)
-                        button('Imprimir', Icons.print_outlined, ready && !controller.isPrinting ? controller.printDocument : null),
+                        button(
+                          'Imprimir',
+                          Icons.print_outlined,
+                          ready && !controller.isPrinting ? controller.printDocument : null,
+                        ),
                       if (!compact) ...[
                         controller.fitsPage
                             ? button('Ajustar à largura', Icons.width_full_outlined, ready ? controller.fitWidth : null)
@@ -813,12 +821,16 @@ class PdfDocumentViewerToolbar extends StatelessWidget {
                         button(
                           'Diminuir zoom',
                           Icons.zoom_out,
-                          ready && controller.zoom > PdfDocumentViewerController.zoomLevels.first ? controller.zoomOut : null,
+                          ready && controller.zoom > PdfDocumentViewerController.zoomLevels.first
+                              ? controller.zoomOut
+                              : null,
                         ),
                         button(
                           'Aumentar zoom',
                           Icons.zoom_in,
-                          ready && controller.zoom < PdfDocumentViewerController.zoomLevels.last ? controller.zoomIn : null,
+                          ready && controller.zoom < PdfDocumentViewerController.zoomLevels.last
+                              ? controller.zoomIn
+                              : null,
                         ),
                       ],
                       if (allowSaving)
@@ -842,7 +854,11 @@ class PdfDocumentViewerToolbar extends StatelessWidget {
                             title,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: TextStyle(fontSize: compact ? 15 : 17, fontWeight: FontWeight.w500, color: _Palette.text),
+                            style: TextStyle(
+                              fontSize: compact ? 15 : 17,
+                              fontWeight: FontWeight.w500,
+                              color: _Palette.text,
+                            ),
                           ),
                         ),
                         for (final widget in buttons) ...[SizedBox(width: gap), widget],
@@ -978,7 +994,11 @@ class PdfViewerToolbarButton extends StatelessWidget {
               hoverColor: _Palette.hover,
               highlightColor: _Palette.hover,
               splashColor: _Palette.splash,
-              child: Icon(icon, size: outlined ? size * 0.55 : size * 0.65, color: enabled ? _Palette.icon : _Palette.disabled),
+              child: Icon(
+                icon,
+                size: outlined ? size * 0.55 : size * 0.65,
+                color: enabled ? _Palette.icon : _Palette.disabled,
+              ),
             ),
           ),
         ),
@@ -1065,7 +1085,6 @@ class _PageFieldState extends State<_PageField> {
     final value = widget.controller.isReady ? '${widget.controller.pageNumber}' : '';
     if (_text.text != value) _text.text = value;
   }
-
 
   @override
   Widget build(BuildContext context) {

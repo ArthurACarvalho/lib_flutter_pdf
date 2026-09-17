@@ -183,7 +183,8 @@ class _Finder {
   static double? _translationY(Matrix4 m) {
     final s = m.storage;
     const tolerance = 1e-9;
-    final identityLinear = (s[0] - 1).abs() < tolerance &&
+    final identityLinear =
+        (s[0] - 1).abs() < tolerance &&
         s[1].abs() < tolerance &&
         s[4].abs() < tolerance &&
         (s[5] - 1).abs() < tolerance;
@@ -240,11 +241,13 @@ class _Finder {
     final tableTop = top + (_translationY(transform) ?? 0);
     final first = table.getRowBox(0);
     final last = table.getRowBox(marker.headerRows - 1);
-    headers.add(RepeatHeaderRegion(
-      headerTop: tableTop + first.top,
-      headerBottom: tableTop + last.bottom,
-      bottom: tableTop + table.size.height,
-    ));
+    headers.add(
+      RepeatHeaderRegion(
+        headerTop: tableTop + first.top,
+        headerBottom: tableTop + last.bottom,
+        bottom: tableTop + table.size.height,
+      ),
+    );
   }
 
   /// Registra quebras forçadas e cabeçalhos dentro de subárvores atômicas.

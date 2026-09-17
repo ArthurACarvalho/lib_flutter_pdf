@@ -34,8 +34,8 @@ class GlyphOutline {
 /// Type 2), usado para desenhar ícones e textos dessas fontes como vetores.
 class CffOutlines {
   CffOutlines(Uint8List bytes, int offset, int length)
-      : _data = ByteData.sublistView(bytes, offset, offset + length),
-        _bytes = Uint8List.sublistView(bytes, offset, offset + length) {
+    : _data = ByteData.sublistView(bytes, offset, offset + length),
+      _bytes = Uint8List.sublistView(bytes, offset, offset + length) {
     _parse();
   }
 
@@ -151,9 +151,7 @@ class CffOutlines {
     final fdSelect = top[1237];
     if (fdArray != null && fdSelect != null) {
       final (fds, _) = _index(fdArray[0].toInt());
-      _fdLocalSubrs = [
-        for (final fd in fds) _subrsFromPrivate(_dict(fd.$1, fd.$2), 18),
-      ];
+      _fdLocalSubrs = [for (final fd in fds) _subrsFromPrivate(_dict(fd.$1, fd.$2), 18)];
       _fdSelect = _readFdSelect(fdSelect[0].toInt());
     }
   }
@@ -290,9 +288,12 @@ class CffOutlines {
           case 8: // rrcurveto
             for (var k = 0; k + 5 < stack.length; k += 6) {
               curveTo(
-                x + stack[k], y + stack[k + 1], //
-                x + stack[k] + stack[k + 2], y + stack[k + 1] + stack[k + 3],
-                x + stack[k] + stack[k + 2] + stack[k + 4], y + stack[k + 1] + stack[k + 3] + stack[k + 5],
+                x + stack[k],
+                y + stack[k + 1], //
+                x + stack[k] + stack[k + 2],
+                y + stack[k + 1] + stack[k + 3],
+                x + stack[k] + stack[k + 2] + stack[k + 4],
+                y + stack[k + 1] + stack[k + 3] + stack[k + 5],
               );
             }
             stack.clear();
@@ -300,9 +301,12 @@ class CffOutlines {
             var k = 0;
             for (; k + 5 < stack.length - 2; k += 6) {
               curveTo(
-                x + stack[k], y + stack[k + 1], //
-                x + stack[k] + stack[k + 2], y + stack[k + 1] + stack[k + 3],
-                x + stack[k] + stack[k + 2] + stack[k + 4], y + stack[k + 1] + stack[k + 3] + stack[k + 5],
+                x + stack[k],
+                y + stack[k + 1], //
+                x + stack[k] + stack[k + 2],
+                y + stack[k + 1] + stack[k + 3],
+                x + stack[k] + stack[k + 2] + stack[k + 4],
+                y + stack[k + 1] + stack[k + 3] + stack[k + 5],
               );
             }
             lineTo(x + stack[k], y + stack[k + 1]);
@@ -313,9 +317,12 @@ class CffOutlines {
               lineTo(x + stack[k], y + stack[k + 1]);
             }
             curveTo(
-              x + stack[k], y + stack[k + 1], //
-              x + stack[k] + stack[k + 2], y + stack[k + 1] + stack[k + 3],
-              x + stack[k] + stack[k + 2] + stack[k + 4], y + stack[k + 1] + stack[k + 3] + stack[k + 5],
+              x + stack[k],
+              y + stack[k + 1], //
+              x + stack[k] + stack[k + 2],
+              y + stack[k + 1] + stack[k + 3],
+              x + stack[k] + stack[k + 2] + stack[k + 4],
+              y + stack[k + 1] + stack[k + 3] + stack[k + 5],
             );
             stack.clear();
           case 26: // vvcurveto

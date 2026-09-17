@@ -29,11 +29,7 @@ class GraficoBarras extends StatelessWidget {
           if (titulo != null) ...[
             Text(
               titulo!,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF222222),
-              ),
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF222222)),
             ),
             const SizedBox(height: 12),
           ],
@@ -56,12 +52,7 @@ class GraficoBarras extends StatelessWidget {
 }
 
 class _BarrasPainter extends CustomPainter {
-  _BarrasPainter({
-    required this.dados,
-    required this.cor,
-    required this.formatarValor,
-    this.fonte,
-  });
+  _BarrasPainter({required this.dados, required this.cor, required this.formatarValor, this.fonte});
 
   final Map<String, double> dados;
   final Color cor;
@@ -79,12 +70,7 @@ class _BarrasPainter extends CustomPainter {
 
     final maximo = dados.values.fold<double>(0, math.max);
     final teto = maximo <= 0 ? 1.0 : maximo * 1.1;
-    final area = Rect.fromLTRB(
-      _eixoEsquerdo,
-      _topo,
-      size.width,
-      size.height - _eixoInferior,
-    );
+    final area = Rect.fromLTRB(_eixoEsquerdo, _topo, size.width, size.height - _eixoInferior);
 
     final grade = Paint()
       ..color = const Color(0xFFE0E0E0)
@@ -110,18 +96,9 @@ class _BarrasPainter extends CustomPainter {
     for (final MapEntry(key: rotulo, value: valor) in dados.entries) {
       final centroX = area.left + larguraSlot * (i + 0.5);
       final altura = area.height * (valor / teto);
-      final retangulo = Rect.fromLTWH(
-        centroX - larguraBarra / 2,
-        area.bottom - altura,
-        larguraBarra,
-        altura,
-      );
+      final retangulo = Rect.fromLTWH(centroX - larguraBarra / 2, area.bottom - altura, larguraBarra, altura);
       canvas.drawRRect(
-        RRect.fromRectAndCorners(
-          retangulo,
-          topLeft: const Radius.circular(4),
-          topRight: const Radius.circular(4),
-        ),
+        RRect.fromRectAndCorners(retangulo, topLeft: const Radius.circular(4), topRight: const Radius.circular(4)),
         barra,
       );
       _texto(
@@ -171,6 +148,5 @@ class _BarrasPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_BarrasPainter oldDelegate) =>
-      oldDelegate.dados != dados || oldDelegate.cor != cor;
+  bool shouldRepaint(_BarrasPainter oldDelegate) => oldDelegate.dados != dados || oldDelegate.cor != cor;
 }

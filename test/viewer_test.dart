@@ -40,9 +40,17 @@ class _FakeBackend extends PdfViewerBackend {
 }
 
 PdfDocument _document() => PdfDocument()
-  ..addPage(PdfMultiPage(
-    build: (ctx) => const [Text('Página um'), PdfPageBreak(), Text('Página dois'), PdfPageBreak(), Text('Página três')],
-  ));
+  ..addPage(
+    PdfMultiPage(
+      build: (ctx) => const [
+        Text('Página um'),
+        PdfPageBreak(),
+        Text('Página dois'),
+        PdfPageBreak(),
+        Text('Página três'),
+      ],
+    ),
+  );
 
 void main() {
   testWidgets('navega, dá zoom, imprime e salva', (tester) async {
@@ -52,9 +60,13 @@ void main() {
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
 
-    await tester.pumpWidget(MaterialApp(
-      home: Scaffold(body: PdfDocumentViewer.bytes(bytes, fileName: 'vendas.pdf', backend: backend)),
-    ));
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: PdfDocumentViewer.bytes(bytes, fileName: 'vendas.pdf', backend: backend),
+        ),
+      ),
+    );
     await tester.pumpAndSettle();
 
     String pageField() => tester.widget<TextField>(find.byKey(const ValueKey('lib_pdf_page_field'))).controller!.text;
@@ -154,16 +166,18 @@ void main() {
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
 
-    await tester.pumpWidget(MaterialApp(
-      home: Scaffold(
-        body: PdfDocumentViewer.bytes(
-          bytes,
-          title: 'Relatório de vendas com um título bem comprido',
-          onClose: () {},
-          backend: _FakeBackend(),
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: PdfDocumentViewer.bytes(
+            bytes,
+            title: 'Relatório de vendas com um título bem comprido',
+            onClose: () {},
+            backend: _FakeBackend(),
+          ),
         ),
       ),
-    ));
+    );
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull); // sem overflow
     expect(find.byTooltip('Aumentar zoom'), findsNothing);
@@ -178,18 +192,21 @@ void main() {
   testWidgets('gera o PdfDocument ao abrir e mostra carregando', (tester) async {
     final backend = _FakeBackend();
     await tester.runAsync(() async {
-      await tester.pumpWidget(MaterialApp(
-        home: Builder(
-          builder: (context) => Scaffold(
-            body: Center(
-              child: FilledButton(
-                onPressed: () => PdfDocumentViewer.open(context, document: _document(), title: 'Relatório', backend: backend),
-                child: const Text('Abrir'),
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Builder(
+            builder: (context) => Scaffold(
+              body: Center(
+                child: FilledButton(
+                  onPressed: () =>
+                      PdfDocumentViewer.open(context, document: _document(), title: 'Relatório', backend: backend),
+                  child: const Text('Abrir'),
+                ),
               ),
             ),
           ),
         ),
-      ));
+      );
       await tester.tap(find.text('Abrir'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));

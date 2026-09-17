@@ -33,23 +33,25 @@ class EmbeddedFont {
     var flags = 4; // simbólica (obrigatório para CIDFonts com Identity)
     if (font.fixedPitch) flags |= 1;
     if (font.italic) flags |= 64;
-    final descriptorRef = writer.add(PdfDict({
-      'Type': const PdfName('FontDescriptor'),
-      'FontName': PdfName(baseName),
-      'Flags': PdfNum(flags),
-      'FontBBox': PdfArray.nums([
-        (font.xMin * scale).round(),
-        (font.yMin * scale).round(),
-        (font.xMax * scale).round(),
-        (font.yMax * scale).round(),
-      ]),
-      'ItalicAngle': PdfNum(font.italicAngle),
-      'Ascent': PdfNum((font.ascender * scale).round()),
-      'Descent': PdfNum((font.descender * scale).round()),
-      'CapHeight': PdfNum(((font.capHeight != 0 ? font.capHeight : font.ascender) * scale).round()),
-      'StemV': PdfNum((10 + 220 * (font.weightClass - 50) / 900).round()),
-      'FontFile2': fileRef,
-    }));
+    final descriptorRef = writer.add(
+      PdfDict({
+        'Type': const PdfName('FontDescriptor'),
+        'FontName': PdfName(baseName),
+        'Flags': PdfNum(flags),
+        'FontBBox': PdfArray.nums([
+          (font.xMin * scale).round(),
+          (font.yMin * scale).round(),
+          (font.xMax * scale).round(),
+          (font.yMax * scale).round(),
+        ]),
+        'ItalicAngle': PdfNum(font.italicAngle),
+        'Ascent': PdfNum((font.ascender * scale).round()),
+        'Descent': PdfNum((font.descender * scale).round()),
+        'CapHeight': PdfNum(((font.capHeight != 0 ? font.capHeight : font.ascender) * scale).round()),
+        'StemV': PdfNum((10 + 220 * (font.weightClass - 50) / 900).round()),
+        'FontFile2': fileRef,
+      }),
+    );
 
     final glyphs = used.toList()..sort();
     final widths = PdfArray();
@@ -67,20 +69,22 @@ class EmbeddedFont {
         ..add(run);
     }
 
-    final cidFontRef = writer.add(PdfDict({
-      'Type': const PdfName('Font'),
-      'Subtype': const PdfName('CIDFontType2'),
-      'BaseFont': PdfName(baseName),
-      'CIDSystemInfo': PdfDict({
-        'Registry': PdfString.text('Adobe'),
-        'Ordering': PdfString.text('Identity'),
-        'Supplement': const PdfNum(0),
+    final cidFontRef = writer.add(
+      PdfDict({
+        'Type': const PdfName('Font'),
+        'Subtype': const PdfName('CIDFontType2'),
+        'BaseFont': PdfName(baseName),
+        'CIDSystemInfo': PdfDict({
+          'Registry': PdfString.text('Adobe'),
+          'Ordering': PdfString.text('Identity'),
+          'Supplement': const PdfNum(0),
+        }),
+        'FontDescriptor': descriptorRef,
+        'DW': PdfNum(font.advance1000(0).round()),
+        'W': widths,
+        'CIDToGIDMap': const PdfName('Identity'),
       }),
-      'FontDescriptor': descriptorRef,
-      'DW': PdfNum(font.advance1000(0).round()),
-      'W': widths,
-      'CIDToGIDMap': const PdfName('Identity'),
-    }));
+    );
 
     final toUnicodeRef = writer.add(PdfStream(PdfDict(), _toUnicodeCMap(glyphs)));
 

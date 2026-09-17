@@ -15,9 +15,9 @@ import 'support/grafico_barras.dart';
 List<String> _pageContents(List<int> pdf) {
   final text = String.fromCharCodes(pdf);
   final result = <String>[];
-  final pageRefs = RegExp(r'/Type /Page/Parent \d+ 0 R/MediaBox \[[^\]]*\]/Resources <<.*?>>/Contents (\d+) 0 R')
-      .allMatches(text.replaceAll('\n', ' '))
-      .map((m) => int.parse(m.group(1)!));
+  final pageRefs = RegExp(
+    r'/Type /Page/Parent \d+ 0 R/MediaBox \[[^\]]*\]/Resources <<.*?>>/Contents (\d+) 0 R',
+  ).allMatches(text.replaceAll('\n', ' ')).map((m) => int.parse(m.group(1)!));
   for (final id in pageRefs) {
     final start = text.indexOf('\n$id 0 obj\n');
     final streamStart = text.indexOf('stream\n', start) + 7;
@@ -38,27 +38,29 @@ Future<List<int>> _render(WidgetTester tester, Widget child) async {
 void main() {
   testWidgets('pontos de quebra: entre filhos e entre linhas, nunca dentro de atômicos', (tester) async {
     final key = GlobalKey();
-    await tester.pumpWidget(Directionality(
-      textDirection: TextDirection.ltr,
-      child: Align(
-        alignment: Alignment.topLeft,
-        child: SizedBox(
-          width: 200,
-          child: Column(
-            key: key,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const SizedBox(height: 50),
-              const Text('linha um linha dois linha três linha quatro', style: TextStyle(fontSize: 20)),
-              Row(children: const [SizedBox(width: 50, height: 40), SizedBox(width: 50, height: 60)]),
-              const PdfKeepTogether(child: Column(children: [SizedBox(height: 30), SizedBox(height: 30)])),
-              const PdfPageBreak(),
-              const SizedBox(height: 10),
-            ],
+    await tester.pumpWidget(
+      Directionality(
+        textDirection: TextDirection.ltr,
+        child: Align(
+          alignment: Alignment.topLeft,
+          child: SizedBox(
+            width: 200,
+            child: Column(
+              key: key,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const SizedBox(height: 50),
+                const Text('linha um linha dois linha três linha quatro', style: TextStyle(fontSize: 20)),
+                Row(children: const [SizedBox(width: 50, height: 40), SizedBox(width: 50, height: 60)]),
+                const PdfKeepTogether(child: Column(children: [SizedBox(height: 30), SizedBox(height: 30)])),
+                const PdfPageBreak(),
+                const SizedBox(height: 10),
+              ],
+            ),
           ),
         ),
       ),
-    ));
+    );
     final root = key.currentContext!.findRenderObject()! as RenderBox;
     final analysis = BreakAnalysis.of(root);
 
@@ -79,11 +81,7 @@ void main() {
   testWidgets('CustomPainter vira vetor; só os rótulos do TextPainter viram imagem', (tester) async {
     final pdf = await _render(
       tester,
-      const SizedBox(
-        width: 400,
-        height: 240,
-        child: GraficoBarras(dados: {'A': 1, 'B': 2, 'C': 3}),
-      ),
+      const SizedBox(width: 400, height: 240, child: GraficoBarras(dados: {'A': 1, 'B': 2, 'C': 3})),
     );
     final content = _pageContents(pdf).single;
     // Barras com cantos arredondados (curvas) e linhas de grade.

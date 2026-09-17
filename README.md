@@ -61,9 +61,10 @@ dependencies:
 PdfDocument(
   title: 'Relatório',            // metadados: title, author, subject, keywords, creator
   theme: ThemeData(colorSchemeSeed: Colors.indigo),
+  textDirection: TextDirection.ltr, // padrão
   fontFamily: 'Inter',           // opcional; o padrão é a Roboto embutida
   fonts: [PdfFont.asset('fonts/Inter-Regular.ttf', family: 'Inter')],
-  locale: const Locale('pt', 'BR'),
+  locale: const Locale('pt', 'BR'), // padrão: en_US
   localizationsDelegates: GlobalMaterialLocalizations.delegates, // se usar widgets com textos do Material
   rasterPixelRatio: 3,           // resolução do que precisa virar imagem
   imageTimeout: const Duration(seconds: 10),
@@ -71,10 +72,10 @@ PdfDocument(
 );
 ```
 
-- **`PdfMultiPage`**: o conteúdo de `build` flui por quantas páginas forem necessárias. Aceita `header`, `footer`, `background`, `foreground`, `format`, `margin`, `theme` e `crossAxisAlignment`.
+- **`PdfMultiPage`**: o conteúdo de `build` flui por quantas páginas forem necessárias. Aceita `header`, `footer`, `background`, `foreground`, `format`, `margin` (padrão: 36 pontos, 1,27 cm), `theme`, `crossAxisAlignment` e `maxPages` (padrão: 1000, proteção contra conteúdo que nunca termina).
 - **`PdfPage`**: uma página única. `build` recebe exatamente a área interna às margens, como uma tela.
-- **`PdfContext`**: chega aos builders (`pageNumber`, `pagesCount`, `format`) e também pode ser lido em qualquer widget com `PdfContext.of(context)`.
-- **Formatos**: `PdfPageFormat.a4` (padrão), `a3`, `a5`, `letter`, `legal`, além de `.landscape` e `PdfPageFormat(largura, altura)` em pontos. 1 pixel lógico equivale a 1 ponto; `PdfPageFormat.cm` e `.mm` ajudam nas margens.
+- **`PdfContext`**: chega aos builders (`pageNumber`, `pagesCount`, `format`) e também pode ser lido em qualquer widget com `PdfContext.of(context)` (ou `maybeOf`, que devolve nulo fora do PDF).
+- **Formatos**: `PdfPageFormat.a4` (padrão), `a3`, `a5`, `letter`, `legal`, além de `.landscape`, `.portrait` e `PdfPageFormat(largura, altura)` em pontos. 1 pixel lógico equivale a 1 ponto; `PdfPageFormat.cm` e `.mm` ajudam nas margens.
 
 ## Visualizador
 
@@ -108,10 +109,10 @@ O que ele oferece:
 
 Parâmetros úteis:
 
-- `title`, `fileName`, `allowPrinting`, `allowSaving`, `showToolbar` e `backgroundColor`;
+- `title`, `fileName`, `allowPrinting`, `allowSaving`, `showToolbar`, `onClose` e `backgroundColor`;
 - `toolbarActions`, para botões extras. Use `PdfViewerToolbarButton` para manter o estilo.
 
-Com um `PdfDocumentViewerController` dá para montar a própria barra: `zoomIn()`, `zoomOut()`, `fitWidth()`, `fitPage()`, `goToPage(n)`, `nextPage()`, `previousPage()`, `printDocument()`, `saveDocument()`, `reload()`, além de `pageNumber`, `pageCount`, `zoom` e `fitsPage`.
+Com um `PdfDocumentViewerController` dá para montar a própria barra: `zoomIn()`, `zoomOut()`, `setZoom(z)`, `fitWidth()`, `fitPage()`, `goToPage(n)`, `nextPage()`, `previousPage()`, `printDocument()`, `saveDocument()` e `reload()`. O estado fica em `isReady`, `pageNumber`, `pageCount`, `zoom`, `fitsPage`, `isPrinting`, `isSaving` e `bytes`. As barras prontas também são widgets públicos: `PdfDocumentViewerToolbar` e `PdfDocumentViewerNavigationBar`.
 
 ### Configuração
 
@@ -131,8 +132,8 @@ Widgets de controle:
 
 - **`PdfKeepTogether(child:)`**: nunca corta o filho. Se ele não couber, começa na próxima página. Use em gráficos, cards e blocos de assinatura.
 - **`PdfPageBreak()`**: força uma nova página e funciona em qualquer nível da árvore.
-- **`PdfTable(header:, rows:, ...)`**: uma `Table` do Flutter que repete o cabeçalho no topo de cada página de continuação. Aceita os mesmos parâmetros de `Table` (`columnWidths`, `border` etc.).
-- **`PdfRasterize(child:)`**: força uma subárvore a virar imagem.
+- **`PdfTable(header:, rows:, ...)`**: uma `Table` do Flutter que repete o cabeçalho no topo de cada página de continuação (desligue com `repeatHeader: false`). Aceita os mesmos parâmetros de `Table` (`columnWidths`, `border` etc.).
+- **`PdfRasterize(child:)`**: força uma subárvore a virar imagem. `pixelRatio` troca a resolução só dela.
 
 Se um bloco sem pontos de corte for maior que a página inteira, ele é cortado na altura da página e um aviso é emitido no console.
 

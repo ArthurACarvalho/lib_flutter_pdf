@@ -70,9 +70,7 @@ const _distExtra = [
   0, 0, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, //
   7, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12, 12, 13, 13,
 ];
-const _codeLengthOrder = [
-  16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15,
-];
+const _codeLengthOrder = [16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15];
 
 final Uint8List _lengthToCode = () {
   final table = Uint8List(259);
@@ -199,8 +197,7 @@ class _Deflater {
     final head = Int32List(_hashSize)..fillRange(0, _hashSize, -1);
     final prev = Int32List(_windowSize);
 
-    int hashAt(int i) =>
-        ((input[i] << 10) ^ (input[i + 1] << 5) ^ input[i + 2]) & (_hashSize - 1);
+    int hashAt(int i) => ((input[i] << 10) ^ (input[i + 1] << 5) ^ input[i + 2]) & (_hashSize - 1);
 
     var i = 0;
     while (i < n) {
@@ -213,8 +210,7 @@ class _Deflater {
         var chain = _maxChain;
         final maxLen = n - i < _maxMatch ? n - i : _maxMatch;
         while (candidate > limit && candidate >= 0 && chain-- > 0) {
-          if (input[candidate + bestLen] == input[i + bestLen] &&
-              input[candidate] == input[i]) {
+          if (input[candidate + bestLen] == input[i + bestLen] && input[candidate] == input[i]) {
             var len = 1;
             while (len < maxLen && input[candidate + len] == input[i + len]) {
               len++;
@@ -347,7 +343,15 @@ class _Deflater {
     var dynamicBits = 17 + numCl * 3;
     for (var k = 0; k < rleSyms.length; k++) {
       final s = rleSyms[k];
-      dynamicBits += clLens[s] + (s == 16 ? 2 : s == 17 ? 3 : s == 18 ? 7 : 0);
+      dynamicBits +=
+          clLens[s] +
+          (s == 16
+              ? 2
+              : s == 17
+              ? 3
+              : s == 18
+              ? 7
+              : 0);
     }
     for (var k = 0; k < 286; k++) {
       if (litFreq[k] == 0) continue;
@@ -434,18 +438,16 @@ Uint8List _huffmanLengths(Int32List freq, int maxBits) {
   for (var level = 1; level < maxBits; level++) {
     final packages = <_PmItem>[];
     for (var k = 0; k + 1 < current.length; k += 2) {
-      packages.add(_PmItem(
-        current[k].weight + current[k + 1].weight,
-        [...current[k].symbols, ...current[k + 1].symbols],
-      ));
+      packages.add(
+        _PmItem(current[k].weight + current[k + 1].weight, [...current[k].symbols, ...current[k + 1].symbols]),
+      );
     }
     // Mescla folhas originais com os pacotes, mantendo a ordem por peso.
     final merged = <_PmItem>[];
     var a = 0;
     var b = 0;
     while (a < leaves.length || b < packages.length) {
-      if (b >= packages.length ||
-          (a < leaves.length && leaves[a].weight <= packages[b].weight)) {
+      if (b >= packages.length || (a < leaves.length && leaves[a].weight <= packages[b].weight)) {
         merged.add(leaves[a++]);
       } else {
         merged.add(packages[b++]);
@@ -625,18 +627,18 @@ class _Inflater {
     }
   }
 
-  static final _fixedLit = _HuffTable(Uint8List(288)
-    ..fillRange(0, 144, 8)
-    ..fillRange(144, 256, 9)
-    ..fillRange(256, 280, 7)
-    ..fillRange(280, 288, 8));
+  static final _fixedLit = _HuffTable(
+    Uint8List(288)
+      ..fillRange(0, 144, 8)
+      ..fillRange(144, 256, 9)
+      ..fillRange(256, 280, 7)
+      ..fillRange(280, 288, 8),
+  );
   static final _fixedDist = _HuffTable(Uint8List(30)..fillRange(0, 30, 5));
 }
 
 class _HuffTable {
-  _HuffTable(Uint8List lens)
-      : counts = Int32List(16),
-        symbols = Int32List(lens.length) {
+  _HuffTable(Uint8List lens) : counts = Int32List(16), symbols = Int32List(lens.length) {
     for (final l in lens) {
       counts[l]++;
     }

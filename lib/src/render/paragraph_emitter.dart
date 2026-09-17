@@ -47,16 +47,11 @@ class ParagraphEmitter {
       painter.setPlaceholderDimensions(placeholders);
       final constraints = paragraph.constraints;
       final wrap = paragraph.softWrap || paragraph.overflow == TextOverflow.ellipsis;
-      painter.layout(
-        minWidth: constraints.minWidth,
-        maxWidth: wrap ? constraints.maxWidth : double.infinity,
-      );
+      painter.layout(minWidth: constraints.minWidth, maxWidth: wrap ? constraints.maxWidth : double.infinity);
 
-      final overflowed = paragraph.size.height < painter.height ||
-          paragraph.size.width < painter.width ||
-          painter.didExceedMaxLines;
-      if (overflowed &&
-          (paragraph.overflow == TextOverflow.ellipsis || paragraph.overflow == TextOverflow.fade)) {
+      final overflowed =
+          paragraph.size.height < painter.height || paragraph.size.width < painter.width || painter.didExceedMaxLines;
+      if (overflowed && (paragraph.overflow == TextOverflow.ellipsis || paragraph.overflow == TextOverflow.fade)) {
         return false;
       }
 
@@ -116,12 +111,14 @@ class ParagraphEmitter {
       if (span.alignment == ui.PlaceholderAlignment.baseline) {
         baselineOffset = child.getDistanceToBaseline(span.baseline ?? TextBaseline.alphabetic);
       }
-      result.add(PlaceholderDimensions(
-        size: child.size,
-        alignment: span.alignment,
-        baseline: span.baseline,
-        baselineOffset: baselineOffset,
-      ));
+      result.add(
+        PlaceholderDimensions(
+          size: child.size,
+          alignment: span.alignment,
+          baseline: span.baseline,
+          baselineOffset: baselineOffset,
+        ),
+      );
       child = parentData.nextSibling;
     }
     return result;
@@ -160,14 +157,7 @@ class ParagraphEmitter {
     return visit(span, parent);
   }
 
-  void _emitRun(
-    TextPainter painter,
-    String plain,
-    _Run run,
-    TtfFont font,
-    List<ui.LineMetrics> lines,
-    Offset offset,
-  ) {
+  void _emitRun(TextPainter painter, String plain, _Run run, TtfFont font, List<ui.LineMetrics> lines, Offset offset) {
     final style = run.style;
     final fontSize = painter.textScaler.scale(style.fontSize ?? 14);
     final color = style.foreground?.color ?? style.color ?? const Color(0xFF000000);
@@ -262,9 +252,7 @@ class ParagraphEmitter {
     required void Function(Offset origin, List<int> glyphs, List<double> positions) draw,
     required void Function(int glyph, String text) embedded,
   }) {
-    final boxes = painter.getBoxesForSelection(
-      TextSelection(baseOffset: start, extentOffset: start + text.length),
-    );
+    final boxes = painter.getBoxesForSelection(TextSelection(baseOffset: start, extentOffset: start + text.length));
     if (boxes.isEmpty) return;
 
     if (boxes.length > 1 && text.runes.length > 1) {
@@ -321,7 +309,8 @@ class ParagraphEmitter {
     draw(Offset(box.left + offset.dx, baseline + offset.dy), glyphs, positions);
   }
 
-  static bool _isSpace(int c) => c == 0x20 || c == 0x09 || c == 0x0A || c == 0x0D || c == 0xA0 || c == 0x2028 || c == 0xFFFC;
+  static bool _isSpace(int c) =>
+      c == 0x20 || c == 0x09 || c == 0x0A || c == 0x0D || c == 0xA0 || c == 0x2028 || c == 0xFFFC;
 
   double _baselineFor(List<ui.LineMetrics> lines, Rect box) {
     final center = box.center.dy;
